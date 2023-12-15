@@ -93,13 +93,13 @@ def pyx_decl_func(name, ret_type, args, header_name):
 
 
 pyx_sub_template = """cdef extern from "{header_name}":
-    void _fortran_{name} "F_FUNC({name},{upname})"({fort_args}) nogil
+    void _fortran_{name} "F_FUNC({suffixed_name},{suffixed_upname})"({fort_args}) nogil
 cdef void {name}({args}) noexcept nogil:
     _fortran_{name}({argnames})
 """
 
 
-def pyx_decl_sub(name, args, header_name):
+def pyx_decl_sub(name, args, header_name, suffix):
     argtypes, argnames = arg_names_and_types(args)
     argtypes = [npy_types.get(t, t) for t in argtypes]
     argnames = [n if n not in ['lambda', 'in'] else n + '_' for n in argnames]
@@ -108,7 +108,13 @@ def pyx_decl_sub(name, args, header_name):
     argnames = [arg_casts(t) + n for n, t in zip(argnames, argtypes)]
     argnames = ', '.join(argnames)
     args = args.replace('*lambda,', '*lambda_,').replace('*in,', '*in_,')
-    return pyx_sub_template.format(name=name, upname=name.upper(),
+    if name == 'xerbla_array':
+        suffixed_name = name + '__'
+    elif name == 'dcabs1' or name == 'lsame':
+        suffixed_name = name + '_'
+    else:
+        suffixed_name = name+suffix
+    return pyx_sub_template.format(name=name, suffixed_name=suffixed_name, suffixed_upname=suffixed_name.upper(),
                                    args=args, fort_args=fort_args,
                                    argnames=argnames, header_name=header_name)
 
@@ -420,9 +426,9 @@ cpdef double complex _test_zdotu(double complex[:] zx, double complex[:] zy) noe
 """
 
 
-def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name):
+def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix):
     funcs = "\n".join(pyx_decl_func(*(s+(header_name,))) for s in func_sigs)
-    subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name,)))
+    subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
     return make_blas_pyx_preamble(all_sigs) + funcs + subs + blas_py_wrappers
 
@@ -449,9 +455,9 @@ def _test_slamch(cmach):
 """
 
 
-def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name):
+def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix):
     funcs = "\n".join(pyx_decl_func(*(s+(header_name,))) for s in func_sigs)
-    subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name,)))
+    subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
     preamble = make_lapack_pyx_preamble(all_sigs)
     return preamble + funcs + subs + lapack_py_wrappers
@@ -592,25 +598,38 @@ def generate_fortran(func_sigs):
 def make_c_args(args):
     types, names = arg_names_and_types(args)
     types = [c_types[arg] for arg in types]
-    return ', '.join(f'{t} *{n}' for t, n in zip(types, names))
+    return ', '.join(f'{t} *{n}' for t, n in zip(types, names)), ', '.join(f'&{n}' for n in names)
 
 
-c_func_template = ("void F_FUNC({name}wrp, {upname}WRP)"
-                   "({return_type} *ret, {args});\n")
+c_func_template = ("""{return_type} F_FUNC({fullname}, {upper_fullname}) ({args});\n
+
+void F_FUNC({name}wrp, {upname}WRP) ({return_type} *ret, {args}) {{\n
+    *ret = F_FUNC({fullname}, {upper_fullname}) ({argnames});\n        
+}}\n""")
 
 
-def c_func_decl(name, return_type, args):
-    args = make_c_args(args)
+def c_func_decl(name, return_type, args, suffix):
+    args, argnames = make_c_args(args)
     return_type = c_types[return_type]
+    if name == 'xerbla_array':
+        fullname = name + '__'
+    elif name == 'dcabs1' or name == 'lsame':
+        fullname = name + '_'
+    else:
+        fullname = name+suffix
+    upper_fullname = fullname.upper()
     return c_func_template.format(name=name, upname=name.upper(),
-                                  return_type=return_type, args=args)
+                                  return_type=return_type, args=args,
+                                  fullname=fullname,
+                                  upper_fullname=upper_fullname,
+                                  argnames=argnames)
 
 
 c_sub_template = "void F_FUNC({name},{upname})({args});\n"
 
 
 def c_sub_decl(name, return_type, args):
-    args = make_c_args(args)
+    args, _ = make_c_args(args)
     return c_sub_template.format(name=name, upname=name.upper(), args=args)
 
 
@@ -646,9 +665,17 @@ c_end = """
 """
 
 
-def generate_c_header(func_sigs, sub_sigs, all_sigs, lib_name):
-    funcs = "".join(c_func_decl(*sig) for sig in func_sigs)
-    subs = "\n" + "".join(c_sub_decl(*sig) for sig in sub_sigs)
+def generate_c_header(func_sigs, sub_sigs, all_sigs, lib_name, suffix):
+    funcs = "".join(c_func_decl(sig[0], sig[1], sig[2], suffix) for sig in func_sigs)
+    subs = ['\n']
+    for sig in sub_sigs:
+        if sig[0] == 'xerbla_array':
+            subs.append(c_sub_decl(sig[0]+'__', sig[1], sig[2]))
+        elif sig[0] == 'dcabs1' or sig[0] == 'lsame':
+            subs.append(c_sub_decl(sig[0]+'_', sig[1], sig[2]))
+        else:
+            subs.append(c_sub_decl(sig[0]+suffix, sig[1], sig[2]))
+    subs = "".join(subs)
     if lib_name == 'LAPACK':
         preamble = (c_preamble.format(lib=lib_name) + lapack_decls)
     else:
@@ -703,7 +730,8 @@ def make_all(outdir,
              blas_fortran_name="_blas_subroutine_wrappers.f",
              lapack_fortran_name="_lapack_subroutine_wrappers.f",
              blas_header_name="_blas_subroutines.h",
-             lapack_header_name="_lapack_subroutines.h"):
+             lapack_header_name="_lapack_subroutines.h",
+             suffix=''):
 
     src_files = (os.path.abspath(__file__),
                  blas_signature_file,
@@ -733,7 +761,7 @@ def make_all(outdir,
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
     blas_sigs = filter_lines(blas_sigs)
-    blas_pyx = generate_blas_pyx(*(blas_sigs + (blas_header_name,)))
+    blas_pyx = generate_blas_pyx(*(blas_sigs + (blas_header_name, suffix)))
     with open(os.path.join(outdir, blas_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
         f.write(blas_pyx)
@@ -745,14 +773,14 @@ def make_all(outdir,
     with open(os.path.join(outdir, blas_fortran_name), 'w') as f:
         f.write(fcomment)
         f.write(blas_fortran)
-    blas_c_header = generate_c_header(*(blas_sigs + ('BLAS',)))
+    blas_c_header = generate_c_header(*(blas_sigs + ('BLAS', suffix)))
     with open(os.path.join(outdir, blas_header_name), 'w') as f:
         f.write(ccomment)
         f.write(blas_c_header)
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
-    lapack_pyx = generate_lapack_pyx(*(lapack_sigs + (lapack_header_name,)))
+    lapack_pyx = generate_lapack_pyx(*(lapack_sigs + (lapack_header_name, suffix)))
     with open(os.path.join(outdir, lapack_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
         f.write(lapack_pyx)
@@ -764,7 +792,7 @@ def make_all(outdir,
     with open(os.path.join(outdir, lapack_fortran_name), 'w') as f:
         f.write(fcomment)
         f.write(lapack_fortran)
-    lapack_c_header = generate_c_header(*(lapack_sigs + ('LAPACK',)))
+    lapack_c_header = generate_c_header(*(lapack_sigs + ('LAPACK', suffix)))
     with open(os.path.join(outdir, lapack_header_name), 'w') as f:
         f.write(ccomment)
         f.write(lapack_c_header)
@@ -774,6 +802,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--outdir", type=str,
                         help="Path to the output directory")
+    parser.add_argument("-s", "--suffix", type=str,
+                        help="Suffix for BLAS/LAPACK functions "
+                        "($NEWLAPACK for new Apple Accelerate)",
+                        default='')
     args = parser.parse_args()
 
     if not args.outdir:
@@ -783,4 +815,4 @@ if __name__ == '__main__':
     else:
         outdir_abs = os.path.join(os.getcwd(), args.outdir)
 
-    make_all(outdir_abs)
+    make_all(outdir_abs, suffix=args.suffix)

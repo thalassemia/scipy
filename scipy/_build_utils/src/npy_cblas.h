@@ -26,6 +26,10 @@ enum CBLAS_SIDE {CblasLeft=141, CblasRight=142};
 
 #define CBLAS_INDEX size_t  /* this may vary between platforms */
 
+#ifdef ACCELERATE_NEW_LAPACK
+    #define BLAS_SYMBOL_SUFFIX $NEWLAPACK
+#endif
+
 #ifdef NO_APPEND_FORTRAN
 #define BLAS_FORTRAN_SUFFIX
 #else

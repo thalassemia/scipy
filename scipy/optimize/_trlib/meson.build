@@ -7,7 +7,7 @@ _trlib = py3.extension_module('_trlib',
     'trlib_quadratic_zero.c',
     'trlib_tri_factor.c'
   ],
-  c_args: cython_c_args,
+  c_args: [cython_c_args, append_fortran],
   include_directories: [
     '../../_lib',
     '../../_build_utils/src'

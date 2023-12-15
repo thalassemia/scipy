@@ -88,6 +88,7 @@ _suppress_all_warnings = ff.get_supported_arguments('-w')
 arpack_lib = static_library('arpack_lib',
   arpack_sources,
   fortran_args: [fortran_ignore_warnings, _suppress_all_warnings],
+  dependencies: [lapack, blas],
   include_directories: ['ARPACK/SRC']
 )
 

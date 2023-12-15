@@ -330,7 +330,7 @@ py3.extension_module('_ufuncs',
     ufuncs_sources,
     uf_cython_gen.process(cython_special[0]),  # _ufuncs.pyx
   ],
-  c_args: [cython_c_args, Wno_maybe_uninitialized],
+  c_args: [cython_c_args, Wno_maybe_uninitialized, append_fortran],
   include_directories: ['../_lib', '../_build_utils/src'],
   dependencies: [
     lapack,

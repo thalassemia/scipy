@@ -153,10 +153,32 @@ fortranobject_dep = declare_dependency(
 # https://github.com/mesonbuild/meson/issues/2835
 blas_name = get_option('blas')
 lapack_name = get_option('lapack')
+
+macOS13_3_or_later = false
+if host_machine.system() == 'darwin'
+  r = run_command('xcrun', '-sdk', 'macosx', '--show-sdk-version', check: true)
+  sdkVersion = r.stdout().strip()
+
+  macOS13_3_or_later = sdkVersion.version_compare('>=13.3')
+endif
+
+blas_symbol_suffix = ''
+append_fortran = ''
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
 # that too to make the fallback detection with CMake work
 if blas_name == 'openblas'
   blas = dependency(['openblas', 'OpenBLAS'])
+elif blas_name == 'accelerate'
+  if macOS13_3_or_later
+    blas = declare_dependency(
+            compile_args: ['-DACCELERATE_NEW_LAPACK'],
+            dependencies: dependency('Accelerate')
+          )
+    blas_symbol_suffix = '$NEWLAPACK'
+    append_fortran = '-DNO_APPEND_FORTRAN'
+  else
+    blas = dependency('Accelerate')
+  endif
 else
   blas = dependency(blas_name)
 endif
@@ -171,7 +193,11 @@ else
   cblas = []
 endif
 
-if lapack_name == 'openblas'
+if blas_name == 'accelerate'
+  # For these libraries we know that they contain LAPACK, and it's desirable to
+  # use that - no need to run the full detection twice.
+  lapack = blas
+elif lapack_name == 'openblas'
   lapack = dependency(['openblas', 'OpenBLAS'])
 else
   lapack = dependency(lapack_name)

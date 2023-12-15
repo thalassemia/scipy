@@ -61,6 +61,9 @@ process_file(filename)
 routine_start_re = re.compile(r'(\n|\A)((     (\$|\*))|)\s*(subroutine|function)\b', re.I)
 routine_end_re = re.compile(r'\n\s*end\s*(subroutine|function)\b.*(\n|\Z)', re.I)
 function_start_re = re.compile(r'\n     (\$|\*)\s*function\b', re.I)
+fortranname_re = re.compile(r'(fortranname\s*(.+))\n', re.I)
+routine_start_and_name_re = re.compile(r'(\n|\A)((     (\$|\*))|)\s*(subroutine|function)\b\s([^\)]*)\(.*\n', re.I)
+included_re = re.compile(r'w(c|z|\<.+\>)(dot(c|u)|ladiv)')
 
 def parse_structure(astr):
     """ Return a list of tuples for each function or subroutine each
@@ -134,7 +137,7 @@ def unique_key(adict):
 
 
 template_name_re = re.compile(r'\A\s*(\w[\w\d]*)\s*\Z')
-def expand_sub(substr, names):
+def expand_sub(substr, names, suffix):
     substr = substr.replace(r'\>', '@rightarrow@')
     substr = substr.replace(r'\<', '@leftarrow@')
     lnames = find_repl_patterns(substr)
@@ -159,6 +162,22 @@ def expand_sub(substr, names):
     numsubs = None
     base_rule = None
     rules = {}
+
+    if len(suffix) > 0:
+        # Functions that already have a fortranname statement get suffix tacked on
+        def suffix_add(mobj):
+            if 'F_FUNC' in mobj[0]:
+                return mobj[0]
+            elif included_re.search(mobj[2]):
+                return mobj[1] + "_\n"
+            return mobj[1] + suffix + "\n"
+        substr, subs_made = fortranname_re.subn(suffix_add, substr)
+        # If no fortranname statement found, add one with correct suffix
+        if subs_made == 0:
+            def fortranname_add(mobj):
+                return mobj[0] + f"\tfortranname {mobj[6]}{suffix}\n"
+            substr = routine_start_and_name_re.sub(fortranname_add, substr)
+
     for r in template_re.findall(substr):
         if r not in rules:
             thelist = lnames.get(r, names.get(r, None))
@@ -194,7 +213,7 @@ def expand_sub(substr, names):
     newstr = newstr.replace('@leftarrow@', '<')
     return newstr
 
-def process_str(allstr):
+def process_str(allstr, suffix):
     newstr = allstr
     writestr = ''
 
@@ -207,7 +226,7 @@ def process_str(allstr):
         cleanedstr, defs = find_and_remove_repl_patterns(newstr[oldend:sub[0]])
         writestr += cleanedstr
         names.update(defs)
-        writestr += expand_sub(newstr[sub[0]:sub[1]], names)
+        writestr += expand_sub(newstr[sub[0]:sub[1]], names, suffix)
         oldend =  sub[1]
     writestr += newstr[oldend:]
 
@@ -233,9 +252,9 @@ def resolve_includes(source):
                 lines.append(line)
     return lines
 
-def process_file(source):
+def process_file(source, suffix):
     lines = resolve_includes(source)
-    return process_str(''.join(lines))
+    return process_str(''.join(lines), suffix)
 
 _special_names = find_repl_patterns('''
 <_c=s,d,c,z>
@@ -257,6 +276,10 @@ def main():
                         help="Path to the input file")
     parser.add_argument("-o", "--outdir", type=str,
                         help="Path to the output directory")
+    parser.add_argument("-s", "--suffix", type=str,
+                        help="Suffix for BLAS/LAPACK functions "
+                        "($NEWLAPACK for new Apple Accelerate)",
+                        default='')
     args = parser.parse_args()
 
     if not args.infile.endswith(('.pyf', '.pyf.src', '.f.src')):
@@ -266,7 +289,7 @@ def main():
 
     # Write out the .pyf/.f file
     if args.infile.endswith(('.pyf.src', '.f.src')):
-        code = process_file(args.infile)
+        code = process_file(args.infile, args.suffix)
         fname_pyf = os.path.join(args.outdir,
                                  os.path.splitext(os.path.split(args.infile)[1])[0])
 

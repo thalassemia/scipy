@@ -9,19 +9,7 @@
 #define CADDR(z) (double *)(&((z).real)), (double*)(&((z).imag))
 #define F2C_CST(z) (double *)&((z)->real), (double *)&((z)->imag)
 
-#if defined(NO_APPEND_FORTRAN)
-#if defined(UPPERCASE_FORTRAN)
-#define F_FUNC(f,F) F
-#else
-#define F_FUNC(f,F) f
-#endif
-#else
-#if defined(UPPERCASE_FORTRAN)
-#define F_FUNC(f,F) F##_
-#else
 #define F_FUNC(f,F) f##_
-#endif
-#endif
 
 extern void F_FUNC(cgama,CGAMA)(double*,double*,int*,double*,double*);
 extern void F_FUNC(hygfz,HYGFZ)(double*,double*,double*,npy_cdouble*,npy_cdouble*,int*);
