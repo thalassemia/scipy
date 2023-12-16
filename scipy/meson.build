@@ -162,6 +162,8 @@ if host_machine.system() == 'darwin'
   macOS13_3_or_later = sdkVersion.version_compare('>=13.3')
 endif
 
+blas_symbol_suffix = ''
+fblas_symbol_suffix = 'openblas'
 append_fortran = ''
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
 # that too to make the fallback detection with CMake work
@@ -175,6 +177,7 @@ elif blas_name == 'accelerate'
       compile_args: ['-DACCELERATE_NEW_LAPACK']
     )
     blas_symbol_suffix = '$NEWLAPACK'
+    fblas_symbol_suffix = ''
     append_fortran = '-DNO_APPEND_FORTRAN'
   else
     blas = dependency('Accelerate')

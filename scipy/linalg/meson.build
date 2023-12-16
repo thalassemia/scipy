@@ -59,7 +59,7 @@ linalg_cython_gen = generator(cython,
 fblas_module = custom_target('fblas_module',
   output: ['_fblasmodule.c', '_fblas-f2pywrappers.f'],
   input: 'fblas.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix + fblas_symbol_suffix]
 )
 
 # Note: we're linking LAPACK on purpose here. For some routines (e.g., spmv)
@@ -81,7 +81,7 @@ py3.extension_module('_fblas',
 flapack_module = custom_target('flapack_module',
   output: ['_flapackmodule.c', '_flapack-f2pywrappers.f'],
   input: 'flapack.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix + fblas_symbol_suffix]
 )
 
 # Note that -Wno-empty-body is Clang-specific and comes from `callstatement`s

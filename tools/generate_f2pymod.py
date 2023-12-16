@@ -62,8 +62,10 @@ routine_start_re = re.compile(r'(\n|\A)((     (\$|\*))|)\s*(subroutine|function)
 routine_end_re = re.compile(r'\n\s*end\s*(subroutine|function)\b.*(\n|\Z)', re.I)
 function_start_re = re.compile(r'\n     (\$|\*)\s*function\b', re.I)
 fortranname_re = re.compile(r'(fortranname\s*(.+))\n', re.I)
-routine_start_and_name_re = re.compile(r'(\n|\A)((     (\$|\*))|)\s*(subroutine|function)\b\s([^\)]*)\(.*\n', re.I)
-included_re = re.compile(r'w(c|z|\<.+\>)(dot(c|u)|ladiv)')
+routine_start_and_name_re = re.compile(r'((\n|\A)((     (\$|\*))|)\s*(subroutine|function)\b\s)([^\)]*)\(([^\)]*|\n)\)((\s*result\s*\([^\)\(]*\))|([^\)\(]*)|)\n', re.I)
+function_start_and_name_re = re.compile(r'((\n|\A)((     (\$|\*))|)\s*(function)\b\s)([^\)]*)\(([^\)]*|\n)\)((\s*result\s*\([^\)\(]*\))|([^\)\(]*)|)\n', re.I)
+function_fortranname_re = re.compile(r'((\n|\A)((     (\$|\*))|)\s*(function)\b\s([^\)]*)\(([^\)]*|\n)\)(.|\n)*fortranname\s*.+)(\n(.|\n)*\n\s*end\s*function\b.*\7(\n|\Z))')
+included_re = re.compile(r'w(c|z|\<.+\>)(dot(c|u)|ladiv)', re.I)
 
 def parse_structure(astr):
     """ Return a list of tuples for each function or subroutine each
@@ -163,20 +165,28 @@ def expand_sub(substr, names, suffix):
     base_rule = None
     rules = {}
 
-    if len(suffix) > 0:
+    if suffix == '$NEWLAPACK':
         # Functions that already have a fortranname statement get suffix tacked on
         def suffix_add(mobj):
             if 'F_FUNC' in mobj[0]:
                 return mobj[0]
             elif included_re.search(mobj[2]):
-                return mobj[1] + "_\n"
-            return mobj[1] + suffix + "\n"
+                return "".join([mobj[1], "_\n"])
+            return "".join([mobj[1], suffix, "\n"])
         substr, subs_made = fortranname_re.subn(suffix_add, substr)
         # If no fortranname statement found, add one with correct suffix
         if subs_made == 0:
             def fortranname_add(mobj):
-                return mobj[0] + f"\tfortranname {mobj[6]}{suffix}\n"
+                return "".join([mobj[0], "\tfortranname ", mobj[7], suffix, "\n"])
             substr = routine_start_and_name_re.sub(fortranname_add, substr)
+    elif suffix == 'openblas':
+        def suffix_add(mobj):
+            return "".join([mobj[1], "_", mobj[10]])
+        substr, subs_made = function_fortranname_re.subn(suffix_add, substr)
+        if subs_made == 0:
+            def fortranname_add(mobj):
+                return "".join([mobj[0], "\tfortranname ", mobj[7], "_\n"])
+            substr = function_start_and_name_re.sub(fortranname_add, substr)
 
     for r in template_re.findall(substr):
         if r not in rules:
