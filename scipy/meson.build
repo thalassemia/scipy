@@ -162,18 +162,18 @@ if host_machine.system() == 'darwin'
   macOS13_3_or_later = sdkVersion.version_compare('>=13.3')
 endif
 
-blas_symbol_suffix = ''
 append_fortran = ''
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
 # that too to make the fallback detection with CMake work
+
 if blas_name == 'openblas'
   blas = dependency(['openblas', 'OpenBLAS'])
 elif blas_name == 'accelerate'
   if macOS13_3_or_later
     blas = declare_dependency(
-            compile_args: ['-DACCELERATE_NEW_LAPACK'],
-            dependencies: dependency('Accelerate')
-          )
+      dependencies: [dependency('Accelerate')],
+      compile_args: ['-DACCELERATE_NEW_LAPACK']
+    )
     blas_symbol_suffix = '$NEWLAPACK'
     append_fortran = '-DNO_APPEND_FORTRAN'
   else
@@ -214,7 +214,7 @@ dependency_map = {
 #        requesting `mkl-dynamic-lp64-seq` here. And then there's work needed
 #        in general to enable the ILP64 interface (also for OpenBLAS).
 uses_mkl = blas.name().to_lower().startswith('mkl') or lapack.name().to_lower().startswith('mkl')
-uses_accelerate = blas.name().to_lower().startswith('accelerate') or lapack.name().to_lower().startswith('accelerate')
+uses_accelerate = blas_name.to_lower().startswith('accelerate') or lapack_name.to_lower().startswith('accelerate')
 use_g77_abi = uses_mkl or uses_accelerate or get_option('use-g77-abi')
 if use_g77_abi
   g77_abi_wrappers = declare_dependency(

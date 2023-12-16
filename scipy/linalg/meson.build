@@ -197,15 +197,27 @@ py3.extension_module('_matfuncs_sqrtm_triu',
   subdir: 'scipy/linalg'
 )
 
+fwrappers = static_library('fwrappers',
+  [
+    cython_linalg[4],
+    cython_linalg[5],
+  ],
+  dependencies: [g77_abi_wrappers, blas, lapack],
+  fortran_args: '-fdollar-ok'
+)
+
 cython_blas = py3.extension_module('cython_blas',
   [
     linalg_cython_gen.process(cython_linalg[0]),  # cython_blas.pyx
     cython_linalg[4],  # _blas_subroutines.h
     'fortran_defs.h'
   ],
-  c_args: [cython_c_args, Wno_incompatible_pointer_types, append_fortran],
+  c_args: [cython_c_args, Wno_incompatible_pointer_types],
+  link_with: fwrappers,
+  link_args: version_link_args,
   dependencies: [lapack, blas, np_dep],
   install: true,
+  link_language: 'fortran',
   subdir: 'scipy/linalg'
 )
 
@@ -215,9 +227,12 @@ cython_lapack = py3.extension_module('cython_lapack',
     cython_linalg[5],  # _lapack_subroutines.h
     'fortran_defs.h'
   ],
-  c_args: [cython_c_args, Wno_incompatible_pointer_types, append_fortran],
+  c_args: [cython_c_args, Wno_incompatible_pointer_types],
+  link_with: fwrappers,
+  link_args: version_link_args,
   dependencies: [lapack, blas, np_dep],
   install: true,
+  link_language: 'fortran',
   subdir: 'scipy/linalg'
 )
 

@@ -324,10 +324,11 @@ end function ddot
 
 
 function <prefix2c>dotu(n,x,offx,incx,y,offy,incy) result(xy)
+  fortranname w<prefix2c>dotu
 
   <ftype2c> :: <prefix2c>dotu, xy
-  callstatement (*f2py_func)(&<prefix2c>dotu_return_value,&n,x+offx,&incx,y+offy,&incy)
-  callprotoargument <ctype2c>*,F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
+  callstatement <prefix2c>dotu_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
+  callprotoargument F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
   intent(c) <prefix2c>dotu
 
   <ftype2c> dimension(*),intent(in) :: x
@@ -350,10 +351,11 @@ end function <prefix2c>dotu
 
 
 function <prefix2c>dotc(n,x,offx,incx,y,offy,incy) result(xy)
+  fortranname w<prefix2c>dotc
 
   <ftype2c> :: <prefix2c>dotc, xy
-  callstatement (*f2py_func)(&<prefix2c>dotc_return_value,&n,x+offx,&incx,y+offy,&incy)
-  callprotoargument <ctype2c>*,F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
+  callstatement <prefix2c>dotc_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
+  callprotoargument F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
   intent(c) <prefix2c>dotc
 
   <ftype2c> dimension(*),intent(in) :: x

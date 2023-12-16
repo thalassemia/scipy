@@ -33,7 +33,7 @@ qhull_src = [
 qhull = py3.extension_module('_qhull',
   [spt_cython_gen.process('_qhull.pyx'),
     'qhull_misc.h', 'qhull_misc.c'] + qhull_src,
-  c_args: [cython_c_args, append_fortran],
+  c_args: cython_c_args,
   include_directories: [
     '../_lib',
     '../_build_utils/src',

@@ -2211,21 +2211,21 @@ end subroutine <prefix>laswp
 !          emax  = largest exponent before overflow
 !          rmax  = overflow threshold  - (base**emax)*(1-eps)
 function dlamch(cmach) result(x)
+    double precision :: dlamch, x
     callstatement dlamch_return_value = (*f2py_func)(&cmach)
     callprotoargument char*
     intent(c) dlamch
 
     character :: cmach
-    double precision :: dlamch
 end function dlamch
 
 function slamch(cmach) result(x)
+    real :: slamch, x
     callstatement slamch_return_value = (*f2py_func)(&cmach)
     callprotoargument char*
     intent(c) slamch
 
     character :: cmach
-    real :: slamch
 end function slamch
 
 function <prefix2>lange(norm,m,n,a,lda,work) result(n2)
@@ -2234,6 +2234,7 @@ function <prefix2>lange(norm,m,n,a,lda,work) result(n2)
     <ftype2> <prefix2>lange, n2
     callstatement <prefix2>lange_return_value = (*f2py_func)(norm,&m,&n,a,&lda,work)
     callprotoargument char*,F_INT*,F_INT*,<ctype2>*,F_INT*,<ctype2>*
+    intent(c) <prefix2>lange
 
     character intent(in),check(*norm=='M'||*norm=='m'||*norm=='1'||*norm=='O'||*norm=='o'||*norm=='I'||*norm=='i'||*norm=='F'||*norm=='f'||*norm=='E'||*norm=='e'):: norm
     integer intent(hide),depend(a,n) :: m = shape(a,0)
@@ -2241,7 +2242,6 @@ function <prefix2>lange(norm,m,n,a,lda,work) result(n2)
     integer intent(hide),depend(a) :: n = shape(a,1)
     <ftype2> dimension(m,n),intent(in) :: a
     <ftype2> dimension(m+1),intent(cache,hide) :: work
-    intent(c) <prefix2>lange
 end function <prefix2>lange
 
 function <prefix2c>lange(norm,m,n,a,lda,work) result(n2)
@@ -2250,6 +2250,7 @@ function <prefix2c>lange(norm,m,n,a,lda,work) result(n2)
     <ftype2> <prefix2c>lange, n2
     callstatement <prefix2c>lange_return_value = (*f2py_func)(norm,&m,&n,a,&lda,work)
     callprotoargument char*,F_INT*,F_INT*,<ctype2c>*,F_INT*,<ctype2>*
+    intent(c) <prefix2c>lange
 
     character intent(in),check(*norm=='M'||*norm=='m'||*norm=='1'||*norm=='O'||*norm=='o'||*norm=='I'||*norm=='i'||*norm=='F'||*norm=='f'||*norm=='E'||*norm=='e'):: norm
     integer intent(hide),depend(a,n) :: m = shape(a,0)
@@ -2257,7 +2258,6 @@ function <prefix2c>lange(norm,m,n,a,lda,work) result(n2)
     integer intent(hide),depend(a) :: n = shape(a,1)
     <ftype2c> dimension(m,n),intent(in) :: a
     <ftype2> dimension(m+1),intent(cache,hide) :: work
-    intent(c) <prefix2c>lange
 end function <prefix2c>lange
 
 subroutine <prefix>larfg(n, alpha, x, incx, tau, lx)

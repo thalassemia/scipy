@@ -30,7 +30,7 @@ enum CBLAS_SIDE {CblasLeft=141, CblasRight=142};
     #define BLAS_SYMBOL_SUFFIX $NEWLAPACK
 #endif
 
-#ifdef NO_APPEND_FORTRAN
+#if defined(NO_APPEND_FORTRAN) || defined(ACCELERATE_NEW_LAPACK)
 #define BLAS_FORTRAN_SUFFIX
 #else
 #define BLAS_FORTRAN_SUFFIX _
