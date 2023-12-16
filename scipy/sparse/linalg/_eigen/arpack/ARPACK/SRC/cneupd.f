@@ -324,9 +324,7 @@ c
      &           scnrm2, slamch, slapy2
       external   scnrm2, slamch, slapy2
 c
-      Complex
-     &           wcdotc
-      external   wcdotc
+      external   cdotc
 c
 c     %-----------------------%
 c     | Executable Statements |
@@ -731,7 +729,7 @@ c                 | upper triangular, thus the length of the |
 c                 | inner product can be set to j.           |
 c                 %------------------------------------------%
 c 
-                  workev(j) = wcdotc(j, workl(ihbds), 1,
+                  call cdotc(workev(j), j, workl(ihbds), 1,
      &                        workl(invsub+(j-1)*ldq), 1)
  40         continue
 c

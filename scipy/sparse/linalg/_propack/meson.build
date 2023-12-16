@@ -84,11 +84,6 @@ elements = [
 ]
 
 fargs_propack = ['-U_OPENMP']
-if use_g77_abi
-  # FIXME: define needs to be removed from PROPACK code, in favor of using
-  # `wcdotc` unconditionally, like is done in ARPACK.
-  fargs_propack += ['-DSCIPY_USE_G77_CDOTC_WRAP=1']
-endif
 foreach ele: elements
   # PROPACK integration is pretty much broken, see for example gh-15108.
   # Note that in setup.py, adding `g77_abi_wrappers` is skipped for 32-bit
@@ -113,7 +108,7 @@ foreach ele: elements
 
   propacklib = py3.extension_module(ele[0],
     propack_module,
-    link_with: propack_lib,
+    link_with: [propack_lib, cwrappers],
     c_args: ['-U_OPENMP', _cpp_Wno_cpp],
     fortran_args: _fflag_Wno_maybe_uninitialized,
     dependencies: [lapack, blas, fortranobject_dep],
