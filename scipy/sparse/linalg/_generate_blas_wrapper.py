@@ -59,8 +59,10 @@ c_func_template = """
 
 wrapped_c_func_template = """
 void {fort_macro}({fort_name})({return_type} *ret, {args});
-void F_FUNC({name}, {upname})({return_type} *ret, {args}){{
-    {fort_macro}({fort_name})(ret, {f_args});
+{return_type} F_FUNC({name}, {upname})({args}){{
+    {return_type} ret;
+    {fort_macro}({fort_name})(&ret,{f_args});
+    return ret;
 }}
 """
 
@@ -81,6 +83,7 @@ def c_func_decl(name, return_type, args, suffix):
             extra_setup = 'int n = 1;'
             f_args = ','.join(['&n', f_args])
         elif name in ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']:
+            name = 'w' + name
             return wrapped_c_func_template.format(name=name, upname=name.upper(),
                                                 return_type=return_type, args=args,
                                                 f_args=f_args, fort_name=fort_name,

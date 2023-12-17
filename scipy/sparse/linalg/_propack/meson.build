@@ -97,7 +97,6 @@ foreach ele: elements
       _fflag_Wno_uninitialized,
       _fflag_fpp,
     ],
-    dependencies: g77_abi_wrappers,
   )
 
   propack_module = custom_target('propack_module' + ele[0],

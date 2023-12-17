@@ -103,7 +103,7 @@ _arpack = py3.extension_module('_arpack',
   c_args: numpy_nodepr_api,
   link_with: [arpack_lib, cwrappers],
   link_args: version_link_args,
-  dependencies: [lapack, blas, fortranobject_dep, g77_abi_wrappers],
+  dependencies: [lapack, blas, fortranobject_dep],
   install: true,
   link_language: 'fortran',
   subdir: 'scipy/sparse/linalg/_eigen/arpack'

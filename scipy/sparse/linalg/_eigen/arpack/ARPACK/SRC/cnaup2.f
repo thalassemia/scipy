@@ -142,7 +142,7 @@ c     svout   ARPACK utility routine that prints vectors.
 c     slamch  LAPACK routine that determines machine constants.
 c     slapy2  LAPACK routine to compute sqrt(x**2+y**2) carefully.
 c     ccopy   Level 1 BLAS that copies one vector to another .
-c     cdotc   Level 1 BLAS that computes the scalar product of two vectors. 
+c     wcdotc   Level 1 BLAS that computes the scalar product of two vectors. 
 c     cswap   Level 1 BLAS that swaps two vectors.
 c     scnrm2  Level 1 BLAS that computes the norm of a vector.
 c
@@ -246,9 +246,11 @@ c     %--------------------%
 c     | External functions |
 c     %--------------------%
 c
+      Complex 
+     &           wcdotc
       Real   
      &           scnrm2, slamch, slapy2
-      external   cdotc, scnrm2, slamch, slapy2
+      external   wcdotc, scnrm2, slamch, slapy2
 c
 c     %---------------------%
 c     | Intrinsic Functions |
@@ -752,7 +754,7 @@ c
          end if
 c 
          if (bmat .eq. 'G') then         
-            call cdotc (cmpnorm, n, resid, 1, workd, 1)
+            cmpnorm = wcdotc (n, resid, 1, workd, 1)
             rnorm = sqrt(slapy2(real (cmpnorm),aimag(cmpnorm)))
          else if (bmat .eq. 'I') then
             rnorm = scnrm2(n, resid, 1)
