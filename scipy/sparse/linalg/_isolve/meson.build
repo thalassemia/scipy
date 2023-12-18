@@ -52,6 +52,18 @@ Util_f_0 = custom_target('Util_f_0',
   command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
 )
 
+iterative_blas_wrapper = custom_target('iterative_blas_wrapper',
+  output: [
+    '_blas_iterative.c',
+    '_lapack_iterative.c'
+  ],
+  command: [py3, generate_blas_wrapper, '-f', 'caxpy', 'ccopy', 'cdotc', 'cdotc', 'crotg', 'cscal', 'ctrsv', 'daxpy', 'dcopy', 'ddot', 'dlamch', 'dnrm2', 'drotg', 'dscal', 'dtrsv', 'dznrm2', 'saxpy', 'scnrm2', 'scopy', 'sdot', 'slamch', 'snrm2', 'srotg', 'sscal', 'strsv', 'zaxpy', 'zcopy', 'zdotc', 'zdotc', 'zrotg', 'zscal', 'ztrsv', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'iterative'],
+  depend_files: [
+    '../../../linalg/cython_blas_signatures.txt',
+    '../../../linalg/cython_lapack_signatures.txt',
+  ]
+)
+
 _iterative_module = custom_target('_iterative_module',
   output: ['_iterative.pyf', '_iterativemodule.c'],
   input: 'iterative/_iterative.pyf.src',
@@ -67,16 +79,17 @@ _iterative = py3.extension_module('_iterative',
     methods_f_3,
     methods_f_4,
     methods_f_5,
-    Util_f_0
+    Util_f_0,
+    iterative_blas_wrapper
   ],
   c_args: numpy_nodepr_api,
   fortran_args: fortran_ignore_warnings,
-  link_with: [cwrappers],
   link_args: version_link_args,
-  dependencies: [lapack, blas, fortranobject_dep],
+  dependencies: [lapack, blas, fortranobject_dep, np_dep],
   install: true,
   link_language: 'fortran',
-  subdir: 'scipy/sparse/linalg/_isolve'
+  subdir: 'scipy/sparse/linalg/_isolve',
+  include_directories: ['../../../linalg']
 )
 
 py3.install_sources([

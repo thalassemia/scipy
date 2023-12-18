@@ -93,6 +93,18 @@ py3.extension_module('_zeros',
   subdir: 'scipy/optimize'
 )
 
+lbfgsb_blas_wrapper = custom_target('lbfgsb_blas_wrapper',
+  output: [
+    '_blas_lbfgsb.c',
+    '_lapack_lbfgsb.c'
+  ],
+  command: [py3, generate_blas_wrapper, '-f', 'daxpy', 'ddot', 'dlamch', 'dcopy', 'dscal', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'lbfgsb'],
+  depend_files: [
+    '../linalg/cython_blas_signatures.txt',
+    '../linalg/cython_lapack_signatures.txt',
+  ]
+)
+
 lbfgsb_module = custom_target('lbfgsb_module',
   output: ['_lbfgsb-f2pywrappers.f', '_lbfgsbmodule.c'],
   input: 'lbfgsb_src/lbfgsb.pyf',
@@ -105,15 +117,16 @@ _lbfgsb = py3.extension_module('_lbfgsb',
     'lbfgsb_src/linpack.f',
     'lbfgsb_src/timer.f',
     lbfgsb_module,
+    lbfgsb_blas_wrapper
   ],
   c_args: numpy_nodepr_api,
   fortran_args: fortran_ignore_warnings,
   link_args: version_link_args,
-  link_with: [cwrappers],
-  dependencies: [lapack, blas, fortranobject_dep],
+  dependencies: [lapack, blas, fortranobject_dep, np_dep],
   install: true,
   link_language: 'fortran',
-  subdir: 'scipy/optimize'
+  subdir: 'scipy/optimize',
+  include_directories: ['../linalg']
 )
 
 moduleTNC = py3.extension_module('_moduleTNC',
