@@ -3,7 +3,7 @@ from operator import itemgetter
 import os
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
-LINALG_DIR = os.path.abspath(os.path.join(CURR_DIR, "../../linalg"))
+LINALG_DIR = os.path.abspath(os.path.join(CURR_DIR, "linalg"))
 
 c_types = {'int': 'int',
            'c': 'npy_complex64',
