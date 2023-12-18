@@ -22,7 +22,7 @@ fortran_types = {'int': 'integer',
                  'char': 'character',
                  'bint': 'logical'}
 
-c_types = {'int': 'int',
+c_types = {'int': 'F_INT',
            'c': 'npy_complex64',
            'd': 'double',
            's': 'float',
@@ -48,6 +48,7 @@ cdef extern from "{header_name}":
     void _fortran_{name} "F_FUNC({name}wrp, {upname}WRP)"({ret_type} *out, {fort_args}) nogil
 cdef {ret_type} {name}({args}) noexcept nogil:
     cdef {ret_type} out
+    {extra_vars}
     _fortran_{name}(&out, {argnames})
     return out
 """
@@ -82,19 +83,28 @@ def pyx_decl_func(name, ret_type, args, header_name):
     argtypes = [npy_types.get(t, t) for t in argtypes]
     fort_args = ', '.join([' *'.join([n, t])
                            for n, t in zip(argtypes, argnames)])
-    argnames = [arg_casts(t) + n for n, t in zip(argnames, argtypes)]
-    argnames = ', '.join(argnames)
+    new_argnames = []
+    extra_vars = []
+    for argname, argtype in zip(argnames, argtypes):
+        if argtype == 'npy_int64':
+            new_argnames.append(f'&{argname}_64')
+            extra_vars.append(f'cdef npy_int64 {argname}_64 = <npy_int64>({argname}[0])\n    ')
+        else: 
+            new_argnames.append(arg_casts(argtype) + argname)
+    argnames = ', '.join(new_argnames)
+    extra_vars = ''.join(extra_vars)
     c_ret_type = c_types[ret_type]
     args = args.replace('lambda', 'lambda_')
     return pyx_func_template.format(name=name, upname=name.upper(), args=args,
                                     fort_args=fort_args, ret_type=ret_type,
                                     c_ret_type=c_ret_type, argnames=argnames,
-                                    header_name=header_name)
+                                    header_name=header_name, extra_vars=extra_vars)
 
 
 pyx_sub_template = """cdef extern from "{header_name}":
     void _fortran_{name} "{fort_macro}({fort_name})"({fort_args}) nogil
 cdef void {name}({args}) noexcept nogil:
+    {extra_vars}
     _fortran_{name}({argnames})
 """
 
@@ -105,21 +115,30 @@ def pyx_decl_sub(name, args, header_name, suffix):
     argnames = [n if n not in ['lambda', 'in'] else n + '_' for n in argnames]
     fort_args = ', '.join([' *'.join([n, t])
                            for n, t in zip(argtypes, argnames)])
-    argnames = [arg_casts(t) + n for n, t in zip(argnames, argtypes)]
-    argnames = ', '.join(argnames)
+    new_argnames = []
+    extra_vars = []
+    for argname, argtype in zip(argnames, argtypes):
+        if argtype == 'npy_int64':
+            new_argnames.append(f'&{argname}_64')
+            extra_vars.append(f'cdef npy_int64 {argname}_64 = <npy_int64>({argname}[0])\n    ')
+        else: 
+            new_argnames.append(arg_casts(argtype) + argname)
+    argnames = ', '.join(new_argnames)
+    extra_vars = ''.join(extra_vars)
     args = args.replace('*lambda,', '*lambda_,').replace('*in,', '*in_,')
     fort_name = name
     if name == 'xerbla_array':
         fort_macro = ''
         fort_name += '_'
-        if suffix == '$NEWLAPACK':
+        if '$NEWLAPACK' in suffix:
             fort_name += '_'
     else:
         fort_macro = 'BLAS_FUNC'
     return pyx_sub_template.format(name=name, upname=name.upper(),
                                    args=args, fort_args=fort_args,
                                    argnames=argnames, header_name=header_name,
-                                   fort_macro=fort_macro, fort_name=fort_name)
+                                   fort_macro=fort_macro, fort_name=fort_name,
+                                   extra_vars=extra_vars)
 
 
 blas_pyx_preamble = '''# cython: boundscheck = False
@@ -158,7 +177,7 @@ Raw function pointers (Fortran-style pointer arguments):
 cdef extern from "fortran_defs.h":
     pass
 
-from numpy cimport npy_complex64, npy_complex128
+from numpy cimport npy_int64, npy_complex64, npy_complex128
 
 '''
 
@@ -205,7 +224,7 @@ Raw function pointers (Fortran-style pointer arguments):
 cdef extern from "fortran_defs.h":
     pass
 
-from numpy cimport npy_complex64, npy_complex128
+from numpy cimport npy_int64, npy_complex64, npy_complex128
 
 cdef extern from "_lapack_subroutines.h":
     # Function pointer type declarations for
@@ -625,7 +644,7 @@ def c_func_decl(name, return_type, args, suffix):
     return_type = c_types[return_type]
     fort_name = name
     fort_macro = 'BLAS_FUNC'
-    if suffix == '$NEWLAPACK':
+    if '$NEWLAPACK' in suffix:
         if name == 'dcabs1':
             fort_macro = ''
         elif name == 'lsame':
@@ -648,7 +667,7 @@ c_sub_template = "void {fort_macro}({name})({args});\n"
 def c_sub_decl(name, return_type, args, suffix):
     args, _ = make_c_args(args)
     fort_macro = 'BLAS_FUNC'
-    if suffix == '$NEWLAPACK':
+    if '$NEWLAPACK' in suffix:
         if name == 'xerbla_array':
             fort_macro = ''
             name += '__'
@@ -659,6 +678,11 @@ c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
 #include "numpy/arrayobject.h"
+#ifdef HAVE_BLAS_ILP64
+#define F_INT npy_int64
+#else
+#define F_INT int
+#endif
 """
 
 lapack_decls = """
@@ -745,7 +769,8 @@ def make_all(outdir,
              lapack_fortran_name="_lapack_subroutine_wrappers.f",
              blas_header_name="_blas_subroutines.h",
              lapack_header_name="_lapack_subroutines.h",
-             suffix=''):
+             suffix='',
+             int_type='int'):
 
     src_files = (os.path.abspath(__file__),
                  blas_signature_file,
@@ -759,6 +784,7 @@ def make_all(outdir,
                  lapack_fortran_name,
                  lapack_header_name)
     dst_files = (os.path.join(outdir, f) for f in dst_files)
+    npy_types['int'] = int_type
 
     os.chdir(BASE_DIR)
 
@@ -818,6 +844,8 @@ if __name__ == '__main__':
                         help="Path to the output directory")
     parser.add_argument("-s", "--suffix", type=str,
                         help="Suffix for Apple Accelerate")
+    parser.add_argument("-i", "--int-type", type=str, default="int",
+                        help="Integer type to use")
     args = parser.parse_args()
 
     if not args.outdir:
@@ -827,4 +855,4 @@ if __name__ == '__main__':
     else:
         outdir_abs = os.path.join(os.getcwd(), args.outdir)
 
-    make_all(outdir_abs, suffix=args.suffix)
+    make_all(outdir_abs, suffix=args.suffix, int_type=args.int_type)

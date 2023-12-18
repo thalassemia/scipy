@@ -83,7 +83,7 @@ _iterative = py3.extension_module('_iterative',
     iterative_blas_wrapper
   ],
   c_args: numpy_nodepr_api,
-  fortran_args: fortran_ignore_warnings,
+  fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int],
   link_args: version_link_args,
   dependencies: [lapack, blas, fortranobject_dep, np_dep],
   install: true,

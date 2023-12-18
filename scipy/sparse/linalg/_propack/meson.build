@@ -79,8 +79,8 @@ endif
 elements = [
   ['_spropack', s_src, 'spropack.pyf', ['lsame', 'saxpy', 'sbdsdc', 'sbdsqr', 'scopy', 'sdot', 'sgemm', 'sgemv', 'slamch', 'slapy2', 'slarnv', 'slartg', 'slascl', 'snrm2', 'srot', 'sscal']],
   ['_dpropack', d_src, 'dpropack.pyf', ['daxpy', 'dbdsdc', 'dbdsqr', 'dcopy', 'ddot', 'dgemm', 'dgemv', 'dlamch', 'dlapy2', 'dlarnv', 'dlartg', 'dlascl', 'dnrm2', 'drot', 'dscal', 'lsame']],
-  ['_cpropack', c_src, 'cpropack.pyf', ['caxpy', 'ccopy', 'cgemv', 'clarnv', 'clascl', 'cscal', 'csscal', 'lsame', 'saxpy', 'sbdsdc', 'sbdsqr', 'scnrm2', 'scopy', 'sdot', 'sgemm', 'slamch', 'slapy2', 'slartg', 'snrm2', 'srot', 'sscal', 'wcdotc', 'wcdotu']],
-  ['_zpropack', z_src, 'zpropack.pyf', ['daxpy', 'dbdsdc', 'dbdsqr', 'dcopy', 'ddot', 'dgemm', 'dlamch', 'dlapy2', 'dlartg', 'dnrm2', 'drot', 'dscal', 'dznrm2', 'lsame', 'wzdotc', 'wzdotu', 'zaxpy', 'zcopy', 'zdscal', 'zgemv', 'zlarnv', 'zlascl', 'zscal']]
+  ['_cpropack', c_src, 'cpropack.pyf', ['caxpy', 'ccopy', 'cgemv', 'clarnv', 'clascl', 'cscal', 'csscal', 'lsame', 'saxpy', 'sbdsdc', 'sbdsqr', 'scnrm2', 'scopy', 'sdot', 'sgemm', 'slamch', 'slapy2', 'slartg', 'snrm2', 'srot', 'sscal', 'cdotc', 'cdotu']],
+  ['_zpropack', z_src, 'zpropack.pyf', ['daxpy', 'dbdsdc', 'dbdsqr', 'dcopy', 'ddot', 'dgemm', 'dlamch', 'dlapy2', 'dlartg', 'dnrm2', 'drot', 'dscal', 'dznrm2', 'lsame', 'zdotc', 'zdotu', 'zaxpy', 'zcopy', 'zdscal', 'zgemv', 'zlarnv', 'zlascl', 'zscal']]
 ]
 
 fargs_propack = ['-U_OPENMP']
@@ -121,7 +121,7 @@ foreach ele: elements
     [propack_module, propack_blas_wrapper],
     link_with: [propack_lib],
     c_args: ['-U_OPENMP', _cpp_Wno_cpp],
-    fortran_args: _fflag_Wno_maybe_uninitialized,
+    fortran_args: [_fflag_Wno_maybe_uninitialized, _fortran_64_bit_int],
     dependencies: [lapack, blas, fortranobject_dep],
     link_args: version_link_args,
     install: true,

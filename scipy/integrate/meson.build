@@ -75,27 +75,27 @@ quadpack_test_src = [
 
 mach_lib = static_library('mach_lib',
   mach_src,
-  fortran_args: fortran_ignore_warnings
+  fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int]
 )
 
 quadpack_lib = static_library('quadpack_lib',
   quadpack_src,
-  fortran_args: fortran_ignore_warnings
+  fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int]
 )
 
 lsoda_lib = static_library('lsoda_lib',
   lsoda_src,
-  fortran_args: fortran_ignore_warnings
+  fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int]
 )
 
 vode_lib = static_library('vode_lib',
   vode_src,
-  fortran_args: fortran_ignore_warnings
+  fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int]
 )
 
 dop_lib = static_library('dop_lib',
   dop_src,
-  fortran_args: fortran_ignore_warnings
+  fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int]
 )
 
 quadpack_blas_wrapper = custom_target('quadpack_blas_wrapper',

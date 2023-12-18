@@ -165,7 +165,7 @@ def expand_sub(substr, names, suffix):
     base_rule = None
     rules = {}
 
-    if suffix == '$NEWLAPACK':
+    if '$NEWLAPACK' in suffix:
         # Functions that already have a fortranname statement get suffix tacked on
         def suffix_add(mobj):
             if 'F_FUNC' in mobj[0]:
@@ -300,6 +300,12 @@ def main():
     # Write out the .pyf/.f file
     if args.infile.endswith(('.pyf.src', '.f.src')):
         code = process_file(args.infile, args.suffix)
+        # Specify 64-bit integers
+        if '64' in args.suffix:
+            def fortranname_add(mobj):
+                return "".join([mobj[0], "\tuse :: iso_fortran_env, only: int64", "\n"])
+            code = routine_start_and_name_re.sub(fortranname_add, code)
+            code = code.replace("integer", "integer(int64)").replace("abs(", "labs(").replace("logical", "integer(int64)")
         fname_pyf = os.path.join(args.outdir,
                                  os.path.splitext(os.path.split(args.infile)[1])[0])
 
@@ -308,10 +314,12 @@ def main():
     else:
         fname_pyf = args.infile
 
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    f2cmap_file = os.path.join(dir_path, '.f2py_f2cmap')
     # Now invoke f2py to generate the C API module file
     if args.infile.endswith(('.pyf.src', '.pyf')):
         p = subprocess.Popen([sys.executable, '-m', 'numpy.f2py', fname_pyf,
-                            '--build-dir', outdir_abs], #'--quiet'],
+                            '--build-dir', outdir_abs, '--f2cmap', f2cmap_file], #'--quiet'],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             cwd=os.getcwd())
         out, err = p.communicate()

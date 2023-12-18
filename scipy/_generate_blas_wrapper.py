@@ -5,7 +5,7 @@ import os
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 LINALG_DIR = os.path.abspath(os.path.join(CURR_DIR, "linalg"))
 
-c_types = {'int': 'int',
+c_types = {'int': 'F_INT',
            'c': 'npy_complex64',
            'd': 'double',
            's': 'float',
@@ -78,7 +78,7 @@ def c_func_decl(name, return_type, args, suffix):
     fort_name = name
     fort_macro = 'BLAS_FUNC'
     extra_setup = ''
-    if suffix == '$NEWLAPACK':
+    if '$NEWLAPACK' in suffix:
         if name == 'dcabs1':
             fort_macro = ''
         elif name == 'lsame':
@@ -110,7 +110,7 @@ void F_FUNC({name}, {upname})({args}){{
 def c_sub_decl(name, return_type, args, suffix):
     args, f_args = make_c_args(args)
     fort_macro = 'BLAS_FUNC'
-    if suffix == '$NEWLAPACK':
+    if '$NEWLAPACK' in suffix:
         if name == 'xerbla_array':
             fort_macro = ''
             name += '__'
@@ -121,6 +121,11 @@ c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
 #include "numpy/arrayobject.h"
+#ifdef HAVE_BLAS_ILP64
+#define F_INT npy_int64
+#else
+#define F_INT int
+#endif
 """
 
 lapack_decls = """

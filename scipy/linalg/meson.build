@@ -15,7 +15,7 @@ cython_linalg = custom_target('cython_linalg',
     '_lapack_subroutine_wrappers.f'
   ],
   input: '_generate_pyx.py',
-  command: [py3, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix],
+  command: [py3, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-i', blas_int_type],
   depend_files: [
     'cython_blas_signatures.txt',
     'cython_lapack_signatures.txt',
@@ -69,7 +69,7 @@ py3.extension_module('_fblas',
   fblas_module,
   c_args: [numpy_nodepr_api, append_fortran],
   link_args: version_link_args,
-  dependencies: [lapack, blas, fortranobject_dep, g77_abi_wrappers],
+  dependencies: [lapack, blas, fortranobject_dep],
   install: true,
   link_language: 'fortran',
   fortran_args: '-fdollar-ok',
@@ -90,7 +90,7 @@ py3.extension_module('_flapack',
   flapack_module,
   c_args: [numpy_nodepr_api, Wno_empty_body, append_fortran],
   link_args: version_link_args,
-  dependencies: [lapack, blas, fortranobject_dep, g77_abi_wrappers],
+  dependencies: [lapack, blas, fortranobject_dep],
   install: true,
   link_language: 'fortran',
   fortran_args: '-fdollar-ok',
@@ -197,23 +197,12 @@ py3.extension_module('_matfuncs_sqrtm_triu',
   subdir: 'scipy/linalg'
 )
 
-fwrappers = static_library('fwrappers',
-  [
-    cython_linalg[4],
-    cython_linalg[5],
-  ],
-  dependencies: [g77_abi_wrappers, blas, lapack],
-  fortran_args: '-fdollar-ok'
-)
-
 cython_blas = py3.extension_module('cython_blas',
   [
     linalg_cython_gen.process(cython_linalg[0]),  # cython_blas.pyx
     cython_linalg[4],  # _blas_subroutines.h
-    'fortran_defs.h'
   ],
   c_args: [cython_c_args, Wno_incompatible_pointer_types],
-  link_with: fwrappers,
   link_args: version_link_args,
   dependencies: [lapack, blas, np_dep],
   install: true,
@@ -225,10 +214,8 @@ cython_lapack = py3.extension_module('cython_lapack',
   [
     linalg_cython_gen.process(cython_linalg[1]),  # cython_lapack.pyx
     cython_linalg[5],  # _lapack_subroutines.h
-    'fortran_defs.h'
   ],
   c_args: [cython_c_args, Wno_incompatible_pointer_types],
-  link_with: fwrappers,
   link_args: version_link_args,
   dependencies: [lapack, blas, np_dep],
   install: true,
@@ -270,7 +257,7 @@ _matfuncs_expm_pyx = custom_target('_matfuncs_expm',
 py3.extension_module('_matfuncs_expm',
   linalg_cython_gen.process(_matfuncs_expm_pyx),
   c_args: cython_c_args,
-  dependencies: np_dep,
+  dependencies: [np_dep, blas],
   link_args: version_link_args,
   install: true,
   subdir: 'scipy/linalg'
@@ -279,7 +266,7 @@ py3.extension_module('_matfuncs_expm',
 _cythonized_array_utils = py3.extension_module('_cythonized_array_utils',
   linalg_init_utils_cython_gen.process('_cythonized_array_utils.pyx'),
   c_args: [cython_c_args, Wno_maybe_uninitialized],
-  dependencies: np_dep,
+  dependencies: [np_dep, blas],
   link_args: version_link_args,
   install: true,
   subdir: 'scipy/linalg'

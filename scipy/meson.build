@@ -153,6 +153,7 @@ fortranobject_dep = declare_dependency(
 # https://github.com/mesonbuild/meson/issues/2835
 blas_name = get_option('blas')
 lapack_name = get_option('lapack')
+use_ilp64 = get_option('use-ilp64')
 
 macOS13_3_or_later = false
 if host_machine.system() == 'darwin'
@@ -163,22 +164,36 @@ if host_machine.system() == 'darwin'
 endif
 
 blas_symbol_suffix = ''
-fblas_symbol_suffix = 'openblas'
+fblas_symbol_suffix = blas_name
 append_fortran = ''
+_fortran_64_bit_int = []
+blas_int_type = 'int'
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
 # that too to make the fallback detection with CMake work
-
+_args_blas = []
 if blas_name == 'openblas'
-  blas = dependency(['openblas', 'OpenBLAS'])
+  if use_ilp64
+    blas_symbol_suffix = '64_'
+    _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME']
+    _fortran_64_bit_int += ['-fdefault-integer-8']
+    blas_int_type = 'npy_int64'
+  endif
+  blas = dependency(['openblas', 'OpenBLAS'], compile_args: _args_blas)
 elif blas_name == 'accelerate'
   if macOS13_3_or_later
-    blas = declare_dependency(
-      dependencies: [dependency('Accelerate')],
-      compile_args: ['-DACCELERATE_NEW_LAPACK']
-    )
     blas_symbol_suffix = '$NEWLAPACK'
+    if use_ilp64
+      _args_blas += ['-DHAVE_BLAS_ILP64']
+      blas_symbol_suffix = '$NEWLAPACK$ILP64'
+      _fortran_64_bit_int += ['-fdefault-integer-8']
+      blas_int_type = 'npy_int64'
+    endif
     fblas_symbol_suffix = ''
     append_fortran = '-DNO_APPEND_FORTRAN'
+    blas = declare_dependency(
+      dependencies: [dependency('Accelerate')],
+      compile_args: ['-DACCELERATE_NEW_LAPACK', _args_blas]
+    )
   else
     blas = dependency('Accelerate')
   endif
@@ -196,12 +211,10 @@ else
   cblas = []
 endif
 
-if blas_name == 'accelerate'
+if blas_name == 'accelerate' or lapack_name == 'openblas'
   # For these libraries we know that they contain LAPACK, and it's desirable to
   # use that - no need to run the full detection twice.
   lapack = blas
-elif lapack_name == 'openblas'
-  lapack = dependency(['openblas', 'OpenBLAS'])
 else
   lapack = dependency(lapack_name)
 endif
@@ -211,27 +224,6 @@ dependency_map = {
   'LAPACK': lapack,
   'PYBIND11': pybind11_dep,
 }
-
-# FIXME: conda-forge sets MKL_INTERFACE_LAYER=LP64,GNU, see gh-11812.
-#        This needs work on gh-16200 to make MKL robust. We should be
-#        requesting `mkl-dynamic-lp64-seq` here. And then there's work needed
-#        in general to enable the ILP64 interface (also for OpenBLAS).
-uses_mkl = blas.name().to_lower().startswith('mkl') or lapack.name().to_lower().startswith('mkl')
-uses_accelerate = blas_name.to_lower().startswith('accelerate') or lapack_name.to_lower().startswith('accelerate')
-use_g77_abi = uses_mkl or uses_accelerate or get_option('use-g77-abi')
-if use_g77_abi
-  g77_abi_wrappers = declare_dependency(
-    sources:
-      [
-        '_build_utils/src/wrap_g77_abi_f.f',
-        '_build_utils/src/wrap_g77_abi_c.c'
-      ],
-    include_directories: inc_np,
-    dependencies: [py3_dep, cblas],
-  )
-else
-  g77_abi_wrappers = declare_dependency(sources: ['_build_utils/src/wrap_dummy_g77_abi.f'])
-endif
 
 scipy_dir = py3.get_install_dir() / 'scipy'
 
