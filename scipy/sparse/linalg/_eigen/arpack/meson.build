@@ -92,28 +92,16 @@ arpack_lib = static_library('arpack_lib',
   include_directories: ['ARPACK/SRC']
 )
 
-arpack_blas_wrapper = custom_target('arpack_blas_wrapper',
-  output: [
-    '_blas_arpack.c',
-    '_lapack_arpack.c'
-  ],
-  command: [py3, generate_blas_wrapper, '-f', 'caxpy', 'ccopy', 'cgemv', 'cgeqr2', 'cgeru', 'clacpy', 'clahqr', 'clanhs', 'clarnv', 'clartg', 'clascl', 'claset', 'cscal', 'csscal', 'ctrevc', 'ctrmm', 'ctrsen', 'cunm2r', 'daxpy', 'dcopy', 'ddot', 'dgemv', 'dgeqr2', 'dger', 'dlabad', 'dlacpy', 'dlaev2', 'dlahqr', 'dlamch', 'dlanhs', 'dlanst', 'dlapy2', 'dlarf', 'dlarfg', 'dlarnv', 'dlartg', 'dlascl', 'dlaset', 'dlasr', 'dnrm2', 'dorm2r', 'dscal', 'dsteqr', 'dswap', 'dtrevc', 'dtrmm', 'dtrsen', 'dznrm2', 'saxpy', 'scnrm2', 'scopy', 'sdot', 'sgemv', 'sgeqr2', 'sger', 'slabad', 'slacpy', 'slaev2', 'slahqr', 'slamch', 'slanhs', 'slanst', 'slapy2', 'slarf', 'slarfg', 'slarnv', 'slartg', 'slascl', 'slaset', 'slasr', 'snrm2', 'sorm2r', 'sscal', 'ssteqr', 'sswap', 'strevc', 'strmm', 'strsen', 'cdotc', 'zdotc', 'zaxpy', 'zcopy', 'zdscal', 'zgemv', 'zgeqr2', 'zgeru', 'zlacpy', 'zlahqr', 'zlanhs', 'zlarnv', 'zlartg', 'zlascl', 'zlaset', 'zscal', 'ztrevc', 'ztrmm', 'ztrsen', 'zunm2r', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'arpack'],
-  depend_files: [
-    '../../../../linalg/cython_blas_signatures.txt',
-    '../../../../linalg/cython_lapack_signatures.txt',
-  ]
-)
-
 arpack_module = custom_target('arpack_module',
   output: ['_arpackmodule.c', '_arpack-f2pywrappers.f'],
   input: 'arpack.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 _arpack = py3.extension_module('_arpack',
-  [arpack_module, arpack_blas_wrapper],
+  arpack_module,
   c_args: numpy_nodepr_api,
-  link_with: [arpack_lib],
+  link_with: [arpack_lib, blas_lapack_wrapper_lib],
   link_args: version_link_args,
   dependencies: [lapack, blas, fortranobject_dep, np_dep],
   install: true,

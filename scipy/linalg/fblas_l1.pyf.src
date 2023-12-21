@@ -281,6 +281,7 @@ function sdot(n,x,offx,incx,y,offy,incy) result (xy)
   callstatement sdot_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
   callprotoargument F_INT*,float*,F_INT*,float*,F_INT*
   intent(c) sdot
+  fortranname F_FUNC(sdot, SDOT)
 
   real dimension(*), intent(in) :: x
   real dimension(*), intent(in) :: y
@@ -305,6 +306,7 @@ function ddot(n,x,offx,incx,y,offy,incy) result (xy)
   callstatement ddot_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
   callprotoargument F_INT*,double*,F_INT*,double*,F_INT*
   intent(c) ddot
+  fortranname F_FUNC(ddot, DDOT)
 
   double precision dimension(*), intent(in) :: x
   double precision dimension(*), intent(in) :: y
@@ -325,9 +327,10 @@ end function ddot
 
 function <prefix2c>dotu(n,x,offx,incx,y,offy,incy) result(xy)
   <ftype2c> :: <prefix2c>dotu, xy
-  callstatement (*f2py_func)(&<prefix2c>dotu_return_value, &n,x+offx,&incx,y+offy,&incy)
-  callprotoargument <ctype2c>*,F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
+  callstatement <prefix2c>dotu_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
+  callprotoargument F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
   intent(c) <prefix2c>dotu
+  fortranname F_FUNC(w<prefix2c>dotu, w<C,Z>dotu)
 
   <ftype2c> dimension(*),intent(in) :: x
   <ftype2c> dimension(*),intent(in) :: y
@@ -350,9 +353,10 @@ end function <prefix2c>dotu
 
 function <prefix2c>dotc(n,x,offx,incx,y,offy,incy) result(xy)
   <ftype2c> :: <prefix2c>dotc, xy
-  callstatement (*f2py_func)(&<prefix2c>dotc_return_value,&n,x+offx,&incx,y+offy,&incy)
-  callprotoargument <ctype2c>*,F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
+  callstatement <prefix2c>dotc_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
+  callprotoargument F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
   intent(c) <prefix2c>dotc
+  fortranname F_FUNC(w<prefix2c>dotc, w<C,Z>dotc)
 
   <ftype2c> dimension(*),intent(in) :: x
   <ftype2c> dimension(*),intent(in) :: y
@@ -379,6 +383,7 @@ function <prefix3>nrm2(n,x,offx,incx) result(n2)
   callstatement <prefix3>nrm2_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype3>*,F_INT*
   intent(c) <prefix3>nrm2
+  fortranname F_FUNC(<prefix3>nrm2, <S, SC>nrm2)
 
   <ftype3> dimension(*),intent(in) :: x
 
@@ -400,6 +405,7 @@ function <prefix4>nrm2(n,x,offx,incx) result(n2)
   callstatement <prefix4>nrm2_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype4>*,F_INT*
   intent(c) <prefix4>nrm2
+  fortranname F_FUNC(<prefix4>nrm2, <D, DZ>nrm2)
 
   <ftype4> dimension(*),intent(in) :: x
 
@@ -420,6 +426,7 @@ function <prefix3>asum(n,x,offx,incx) result (s)
   callstatement <prefix3>asum_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype3>*,F_INT*
   intent(c) <prefix3>asum
+  fortranname F_FUNC(<prefix3>asum, <S, SC>asum)
 
   <ftype3> dimension(*), intent(in) :: x
   <ftypereal3> <prefix3>asum,s
@@ -438,6 +445,7 @@ function <prefix4>asum(n,x,offx,incx) result (s)
   callstatement <prefix4>asum_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype4>*,F_INT*
   intent(c) <prefix4>asum
+  fortranname F_FUNC(<prefix4>asum, <D, DZ>asum)
 
   <ftype4> dimension(*), intent(in) :: x
   <ftypereal4> <prefix4>asum,s
@@ -459,6 +467,7 @@ function i<prefix>amax(n,x,offx,incx) result(k)
   ! This is to avoid Fortran wrappers.
   integer i<prefix>amax,k
   intent(c) i<prefix>amax
+  fortranname F_FUNC(i<prefix>amax, i<S, D>amax)
   <ftype> dimension(*), intent(in) :: x
   integer optional, intent(in), check(incx>0||incx<0) :: incx = 1
   integer optional, intent(in), depend(x) :: offx=0

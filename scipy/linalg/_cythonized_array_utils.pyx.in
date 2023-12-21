@@ -9,6 +9,8 @@ from scipy.linalg._cythonized_array_utils cimport (
 from scipy.linalg.cython_lapack cimport sgetrf, dgetrf, cgetrf, zgetrf
 from libc.stdlib cimport malloc, free
 
+from numpy cimport npy_int64
+
 __all__ = ['bandwidth', 'issymmetric', 'ishermitian']
 
 
@@ -17,10 +19,10 @@ __all__ = ['bandwidth', 'issymmetric', 'ishermitian']
 @cython.boundscheck(False)
 @cython.initializedcheck(False)
 def find_det_from_lu(lapack_t[:, ::1] a):
-    cdef int n = a.shape[0], k, perm = 0, info = 0
+    cdef {{ i_type }} n = a.shape[0], k, perm = 0, info = 0
     cdef double det = 1.
     cdef double complex detj = 1.+0.j
-    cdef int *piv = <int *>malloc(<int>n * sizeof(int))
+    cdef {{ i_type }} *piv = <{{ i_type }} *>malloc(<{{ i_type }}>n * sizeof({{ i_type }}))
     try:
         if not piv:
             raise MemoryError('Internal memory allocation request for LU '

@@ -69,7 +69,7 @@ python module _dpropack ! in
             real :: trestart
             real :: tdot
             integer :: nsing
-            common /timing/ nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot,nsing
+            common /timing/ nsing,nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot
         end subroutine dlansvd
 
         subroutine dlansvd_irl(which,jobu,jobv,m,n,dim,p,neig,maxiter,aprod,u,ldu,sigma,bnd,v,ldv,tolin,work,lwork,iwork,liwork,doption,ioption,info,dparm,iparm) ! in :_dpropack:PROPACK/double/dlansvd_irl.F
@@ -127,7 +127,7 @@ python module _dpropack ! in
             real :: trestart
             real :: tdot
             integer :: nsing
-            common /timing/ nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot,nsing
+            common /timing/ nsing,nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot
         end subroutine dlansvd_irl
     end interface
 end python module _dpropack

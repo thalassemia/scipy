@@ -93,22 +93,10 @@ py3.extension_module('_zeros',
   subdir: 'scipy/optimize'
 )
 
-lbfgsb_blas_wrapper = custom_target('lbfgsb_blas_wrapper',
-  output: [
-    '_blas_lbfgsb.c',
-    '_lapack_lbfgsb.c'
-  ],
-  command: [py3, generate_blas_wrapper, '-f', 'daxpy', 'ddot', 'dlamch', 'dcopy', 'dscal', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'lbfgsb'],
-  depend_files: [
-    '../linalg/cython_blas_signatures.txt',
-    '../linalg/cython_lapack_signatures.txt',
-  ]
-)
-
 lbfgsb_module = custom_target('lbfgsb_module',
   output: ['_lbfgsb-f2pywrappers.f', '_lbfgsbmodule.c'],
   input: 'lbfgsb_src/lbfgsb.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 _lbfgsb = py3.extension_module('_lbfgsb',
@@ -117,8 +105,8 @@ _lbfgsb = py3.extension_module('_lbfgsb',
     'lbfgsb_src/linpack.f',
     'lbfgsb_src/timer.f',
     lbfgsb_module,
-    lbfgsb_blas_wrapper
   ],
+  link_with: blas_lapack_wrapper_lib,
   c_args: numpy_nodepr_api,
   fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int],
   link_args: version_link_args,
@@ -253,7 +241,13 @@ opt_gen = generator(cython,
   output : '@BASENAME@.c',
   depends : [_cython_tree, cython_blas_pxd, cython_optimize_pxd, _dummy_init_optimize])
 
-_bglu_dense_c = opt_gen.process('_bglu_dense.pyx')
+_bglu_dense_pyx = custom_target('_bglu_dense',
+  output: '_bglu_dense.pyx',
+  input: '_bglu_dense.pyx.in',
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+)
+
+_bglu_dense_c = opt_gen.process(_bglu_dense_pyx)
 
 py3.extension_module('_bglu_dense',
   _bglu_dense_c,

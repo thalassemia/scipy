@@ -31,6 +31,8 @@ precision = ['float', 'double', 'float', 'double']
 prefixes = ['s', 'd', 'c', 'z']
 }}
 
+from numpy cimport npy_int64
+
 
 # ========================= norm1 : s, d, c, z ===============================
 # The generic abs() function is made nogil friendly in Cython 3.x (unreleased)
@@ -44,7 +46,7 @@ cdef double norm1(lapack_t[:, ::1] A) noexcept:
     """
     cdef Py_ssize_t n = A.shape[0]
     cdef Py_ssize_t i, j
-    cdef int ind = 1, intn = <int>n
+    cdef {{ i_type }} ind = 1, intn = <{{ i_type }}>n
     cdef double temp = 0.
     cdef double complex temp_cz = 0.
     cdef double temp_sd = 0.
@@ -80,8 +82,8 @@ cdef double norm1(lapack_t[:, ::1] A) noexcept:
 @cython.wraparound(False)
 @cython.boundscheck(False)
 @cython.initializedcheck(False)
-cdef double kth_power_norm_d(double* A, double* v1, double* v2, Py_ssize_t n, int spins) noexcept:
-    cdef int k, int_one = 1, intn = <int>n
+cdef double kth_power_norm_d(double* A, double* v1, double* v2, Py_ssize_t n, {{ i_type }} spins) noexcept:
+    cdef {{ i_type }} k, int_one = 1, intn = <{{ i_type }}>n
     cdef double one =1., zero = 0.
     for k in range(spins):
         dgemv(<char*>'C', &intn, &intn, &one, &A[0], &intn, &v1[0], &int_one, &zero, &v2[0], &int_one)
@@ -100,7 +102,7 @@ cdef double kth_power_norm_d(double* A, double* v1, double* v2, Py_ssize_t n, in
 @cython.initializedcheck(False)
 cdef pick_pade_structure_{{ pfx }}({{ tname }}[:, :, ::1] Am) noexcept:
     cdef Py_ssize_t n = Am.shape[1], i, j, k
-    cdef int lm = 0, s = 0, intn = <int>n, n2= intn*intn, int_one = 1
+    cdef {{ i_type }} lm = 0, s = 0, intn = <{{ i_type }}>n, n2= intn*intn, int_one = 1
     cdef {{ tname }}[:, :, ::1] Amv = Am
     cdef:
         {{ tname }} one = 1.0, zero = 0.0
@@ -150,13 +152,13 @@ cdef pick_pade_structure_{{ pfx }}({{ tname }}[:, :, ::1] Am) noexcept:
 
         # m = 3
         temp = kth_power_norm_d(absA, work, work2, n, 6)
-        lm = max(<int>ceil(log2(temp/normA/coeff[0])/6), 0)
+        lm = max(<{{ i_type }}>ceil(log2(temp/normA/coeff[0])/6), 0)
         if eta0 < theta[0] and lm == 0:
             return 3, s
 
         # m = 5
         temp = kth_power_norm_d(absA, work, work2, n, 4)
-        lm = max(<int>ceil(log2(temp/normA/coeff[1])/10), 0)
+        lm = max(<{{ i_type }}>ceil(log2(temp/normA/coeff[1])/10), 0)
         if eta1 < theta[1] and lm == 0:
             return 5, s
 
@@ -169,13 +171,13 @@ cdef pick_pade_structure_{{ pfx }}({{ tname }}[:, :, ::1] Am) noexcept:
 
         eta2 = max(d6, d8)
         temp = kth_power_norm_d(absA, work, work2, n, 4)
-        lm = max(<int>ceil(log2(temp/normA/coeff[2])/14), 0)
+        lm = max(<{{ i_type }}>ceil(log2(temp/normA/coeff[2])/14), 0)
         if eta2 < theta[2] and lm == 0:
             return 7, s
 
         # m = 9
         temp = kth_power_norm_d(absA, work, work2, n, 4)
-        lm = max(<int>ceil(log2(temp/normA/coeff[3])/18), 0)
+        lm = max(<{{ i_type }}>ceil(log2(temp/normA/coeff[3])/18), 0)
         if eta2 < theta[3] and lm == 0:
             return 9, s
 
@@ -189,7 +191,7 @@ cdef pick_pade_structure_{{ pfx }}({{ tname }}[:, :, ::1] Am) noexcept:
 
         eta3 = max(d8, d10)
         eta4 = min(eta2, eta3)
-        s = max(<int>ceil(log2(eta4/theta[4])), 0)
+        s = max(<{{ i_type }}>ceil(log2(eta4/theta[4])), 0)
         if s != 0:
             two_pow_s = 2.** (-s)
             dscal(&n2, &two_pow_s, absA, &int_one)
@@ -199,7 +201,7 @@ cdef pick_pade_structure_{{ pfx }}({{ tname }}[:, :, ::1] Am) noexcept:
                 work[i] *= two_pow_s
             normA *= 2.**(-s)
         temp = kth_power_norm_d(absA, work, work2, n, 8)
-        s += max(<int>ceil(log2(temp/normA/coeff[4])/26), 0)
+        s += max(<{{ i_type }}>ceil(log2(temp/normA/coeff[4])/26), 0)
         return 13, s
     finally:
         free(work)
@@ -222,10 +224,10 @@ cdef pick_pade_structure_{{ pfx }}({{ tname }}[:, :, ::1] Am) noexcept:
 @cython.wraparound(False)
 @cython.boundscheck(False)
 @cython.initializedcheck(False)
-cdef void pade_357_UV_calc_{{ pfx }}({{ tname }}[:, :, ::]Am, int n, int m) noexcept nogil:
+cdef void pade_357_UV_calc_{{ pfx }}({{ tname }}[:, :, ::]Am, {{ i_type }} n, {{ i_type }} m) noexcept nogil:
     cdef {{ tname }} b[7]
-    cdef int *ipiv = <int*>malloc(n*sizeof(int))
-    cdef int i, info, n2 = n*n, int_one = 1
+    cdef {{ i_type }} *ipiv = <{{ i_type }}*>malloc(n*sizeof({{ i_type }}))
+    cdef {{ i_type }} i, info, n2 = n*n, int_one = 1
     cdef {{ prec }} two=2.0
     cdef {{ tname }} one = 1.0, zero = 0.0, neg_one = -1.0
     if not ipiv:
@@ -318,11 +320,11 @@ cdef void pade_357_UV_calc_{{ pfx }}({{ tname }}[:, :, ::]Am, int n, int m) noex
 @cython.wraparound(False)
 @cython.boundscheck(False)
 @cython.initializedcheck(False)
-cdef void pade_9_UV_calc_{{ pfx }}({{ tname }}[:, :, ::]Am, int n) noexcept nogil:
+cdef void pade_9_UV_calc_{{ pfx }}({{ tname }}[:, :, ::]Am, {{ i_type }} n) noexcept nogil:
     cdef {{ tname }} b[9]
     cdef {{ tname }} *work = <{{ tname }}*>malloc(n*n*sizeof({{ tname }}))
-    cdef int *ipiv = <int*>malloc(n*sizeof(int))
-    cdef int i, info, n2 = n*n, int_one = 1
+    cdef {{ i_type }} *ipiv = <{{ i_type }}*>malloc(n*sizeof({{ i_type }}))
+    cdef {{ i_type }} i, info, n2 = n*n, int_one = 1
     cdef {{ tname }} one = 1.0, zero = 0.0, neg_one = -1.0
     cdef {{if pfx in ['s', 'c']}}float{{else}}double{{endif}} two = 2.0
 
@@ -383,13 +385,13 @@ cdef void pade_9_UV_calc_{{ pfx }}({{ tname }}[:, :, ::]Am, int n) noexcept nogi
 @cython.wraparound(False)
 @cython.boundscheck(False)
 @cython.initializedcheck(False)
-cdef void pade_13_UV_calc_{{ pfx }}({{ tname }}[:, :, ::1]Am, int n) noexcept nogil:
+cdef void pade_13_UV_calc_{{ pfx }}({{ tname }}[:, :, ::1]Am, {{ i_type }} n) noexcept nogil:
     cdef {{ tname }} *work2 = <{{ tname }}*>malloc(n*n*sizeof({{ tname }}))
     cdef {{ tname }} *work3 = <{{ tname }}*>malloc(n*n*sizeof({{ tname }}))
     cdef {{ tname }} *work4 = <{{ tname }}*>malloc(n*n*sizeof({{ tname }}))
-    cdef int *ipiv = <int*>malloc(n*sizeof(int))
+    cdef {{ i_type }} *ipiv = <{{ i_type }}*>malloc(n*sizeof({{ i_type }}))
     cdef Py_ssize_t i, j, k
-    cdef int info, int1 = 1, n2 = n*n
+    cdef {{ i_type }} info, int1 = 1, n2 = n*n
     cdef {{ tname }} one = 1.0, zero = 0.0, neg_one = -1.
     cdef {{if pfx in ['s', 'c']}}float{{else}}double{{endif}} two = 2.0
     cdef {{ tname }} b[14]
@@ -607,7 +609,7 @@ def _norm1est(A, m=1, t=2, max_iter=5):
 
 
 @cython.initializedcheck(False)
-def pade_UV_calc(lapack_t[:, :, ::1]Am, int n, int m):
+def pade_UV_calc(lapack_t[:, :, ::1]Am, {{ i_type }} n, {{ i_type }} m):
     """Helper functions for expm to solve the final polynomial evaluation"""
     if lapack_t is float:
         if m in [3, 5, 7]:

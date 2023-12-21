@@ -102,8 +102,15 @@ interpnd = py3.extension_module('interpnd',
   subdir: 'scipy/interpolate'
 )
 
+_ppoly_pxi = fs.copyfile('_poly_common.pxi')
+_ppoly_pyx = custom_target('_ppoly',
+  output: '_ppoly.pyx',
+  input: '_ppoly.pyx.in',
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+)
+
 py3.extension_module('_ppoly',
-  linalg_cython_gen.process('_ppoly.pyx'),
+  linalg_cython_gen.process(_ppoly_pyx),
   c_args: cython_c_args,
   dependencies: np_dep,
   link_args: version_link_args,
@@ -145,7 +152,7 @@ _fitpack = py3.extension_module('_fitpack',
 dfitpack_module = custom_target('dfitpack_module',
   output: ['dfitpack-f2pywrappers.f', 'dfitpackmodule.c'],
   input: 'src/fitpack.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 # TODO: Add flags for 64 bit ints

@@ -77,26 +77,14 @@ else
 endif
 
 elements = [
-  ['_spropack', s_src, 'spropack.pyf', ['lsame', 'saxpy', 'sbdsdc', 'sbdsqr', 'scopy', 'sdot', 'sgemm', 'sgemv', 'slamch', 'slapy2', 'slarnv', 'slartg', 'slascl', 'snrm2', 'srot', 'sscal']],
-  ['_dpropack', d_src, 'dpropack.pyf', ['daxpy', 'dbdsdc', 'dbdsqr', 'dcopy', 'ddot', 'dgemm', 'dgemv', 'dlamch', 'dlapy2', 'dlarnv', 'dlartg', 'dlascl', 'dnrm2', 'drot', 'dscal', 'lsame']],
-  ['_cpropack', c_src, 'cpropack.pyf', ['caxpy', 'ccopy', 'cgemv', 'clarnv', 'clascl', 'cscal', 'csscal', 'lsame', 'saxpy', 'sbdsdc', 'sbdsqr', 'scnrm2', 'scopy', 'sdot', 'sgemm', 'slamch', 'slapy2', 'slartg', 'snrm2', 'srot', 'sscal', 'cdotc', 'cdotu']],
-  ['_zpropack', z_src, 'zpropack.pyf', ['daxpy', 'dbdsdc', 'dbdsqr', 'dcopy', 'ddot', 'dgemm', 'dlamch', 'dlapy2', 'dlartg', 'dnrm2', 'drot', 'dscal', 'dznrm2', 'lsame', 'zdotc', 'zdotu', 'zaxpy', 'zcopy', 'zdscal', 'zgemv', 'zlarnv', 'zlascl', 'zscal']]
+  ['_spropack', s_src, 'spropack.pyf'],
+  ['_dpropack', d_src, 'dpropack.pyf'],
+  ['_cpropack', c_src, 'cpropack.pyf'],
+  ['_zpropack', z_src, 'zpropack.pyf']
 ]
 
 fargs_propack = ['-U_OPENMP']
 foreach ele: elements
-  propack_blas_wrapper = custom_target('blas_wrapper' + ele[0],
-    output: [
-      '_blas_' + ele[0] + '.c',
-      '_lapack_' + ele[0] + '.c'
-    ],
-    command: [py3, generate_blas_wrapper, '-f', ele[3], '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', ele[0]],
-    depend_files: [
-      '../../../linalg/cython_blas_signatures.txt',
-      '../../../linalg/cython_lapack_signatures.txt',
-    ]
-  )
-
   # PROPACK integration is pretty much broken, see for example gh-15108.
   # Note that in setup.py, adding `g77_abi_wrappers` is skipped for 32-bit
   # architectures (stated reason: "it blows up").
@@ -108,18 +96,19 @@ foreach ele: elements
       _fflag_Wno_intrinsic_shadow,
       _fflag_Wno_uninitialized,
       _fflag_fpp,
+      _fortran_64_bit_int
     ],
   )
 
   propack_module = custom_target('propack_module' + ele[0],
     output: [ele[0] + '-f2pywrappers.f', ele[0] + 'module.c'],
     input: ele[2],
-    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
   )
 
   propacklib = py3.extension_module(ele[0],
-    [propack_module, propack_blas_wrapper],
-    link_with: [propack_lib],
+    propack_module,
+    link_with: [propack_lib, blas_lapack_wrapper_lib],
     c_args: ['-U_OPENMP', _cpp_Wno_cpp],
     fortran_args: [_fflag_Wno_maybe_uninitialized, _fortran_64_bit_int],
     dependencies: [lapack, blas, fortranobject_dep],

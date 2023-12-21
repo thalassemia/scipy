@@ -16,8 +16,14 @@ slib = py3.extension_module('_optimal_leaf_ordering',
   subdir: 'scipy/cluster'
 )
 
+_vq_pyx = custom_target('_vq',
+  output: '_vq.pyx',
+  input: '_vq.pyx.in',
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+)
+
 slib = py3.extension_module('_vq',
-  linalg_cython_gen.process('_vq.pyx'),
+  linalg_cython_gen.process(_vq_pyx),
   c_args: cython_c_args,
   dependencies: np_dep,
   link_args: version_link_args,

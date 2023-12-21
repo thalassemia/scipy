@@ -1,5 +1,11 @@
+givens_elimination_pyx = custom_target('givens_elimination',
+  output: 'givens_elimination.pyx',
+  input: 'givens_elimination.pyx.in',
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+)
+
 _lsq = py3.extension_module('givens_elimination',
-  linalg_cython_gen.process('givens_elimination.pyx'),
+  linalg_cython_gen.process(givens_elimination_pyx),
   c_args: cython_c_args,
   dependencies: np_dep,
   link_args: version_link_args,

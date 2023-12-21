@@ -138,24 +138,25 @@ def test_fortran_roundtrip(tmpdir):
 
     # integer
     m, n, k = 5, 3, 2
-    a = np.random.randn(m, n, k).astype(np.int32)
+    int_type = _test_fortran.types.intvar.dtype
+    a = np.random.randn(m, n, k).astype(int_type)
     with FortranFile(filename, 'w') as f:
         f.write_record(a.T)
     a2 = _test_fortran.read_unformatted_int(m, n, k, filename)
     with FortranFile(filename, 'r') as f:
-        a3 = f.read_record('(2,3,5)i4').T
+        a3 = f.read_record(f'(2,3,5){int_type.name}').T
     assert_equal(a2, a)
     assert_equal(a3, a)
 
     # mixed
     m, n, k = 5, 3, 2
     a = np.random.randn(m, n)
-    b = np.random.randn(k).astype(np.intc)
+    b = np.random.randn(k).astype(int_type)
     with FortranFile(filename, 'w') as f:
         f.write_record(a.T, b.T)
     a2, b2 = _test_fortran.read_unformatted_mixed(m, n, k, filename)
     with FortranFile(filename, 'r') as f:
-        a3, b3 = f.read_record('(3,5)f8', '2i4')
+        a3, b3 = f.read_record('(3,5)f8', f'2{int_type.name}')
         a3 = a3.T
     assert_equal(a2, a)
     assert_equal(a3, a)

@@ -165,7 +165,6 @@ endif
 
 blas_symbol_suffix = ''
 fblas_symbol_suffix = blas_name
-append_fortran = ''
 _fortran_64_bit_int = []
 blas_int_type = 'int'
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
@@ -174,7 +173,7 @@ _args_blas = []
 if blas_name == 'openblas'
   if use_ilp64
     blas_symbol_suffix = '64_'
-    _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME']
+    _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME', '-DHAVE_BLAS_ILP64']
     _fortran_64_bit_int += ['-fdefault-integer-8']
     blas_int_type = 'npy_int64'
   endif
@@ -189,7 +188,6 @@ elif blas_name == 'accelerate'
       blas_int_type = 'npy_int64'
     endif
     fblas_symbol_suffix = ''
-    append_fortran = '-DNO_APPEND_FORTRAN'
     blas = declare_dependency(
       dependencies: [dependency('Accelerate')],
       compile_args: ['-DACCELERATE_NEW_LAPACK', _args_blas]
@@ -224,6 +222,14 @@ dependency_map = {
   'LAPACK': lapack,
   'PYBIND11': pybind11_dep,
 }
+
+# FIXME: conda-forge sets MKL_INTERFACE_LAYER=LP64,GNU, see gh-11812.
+#        This needs work on gh-16200 to make MKL robust. We should be
+#        requesting `mkl-dynamic-lp64-seq` here. And then there's work needed
+#        in general to enable the ILP64 interface (also for OpenBLAS).
+uses_mkl = blas_name.to_lower().startswith('mkl') or lapack_name.to_lower().startswith('mkl')
+uses_accelerate = blas_name.to_lower().startswith('accelerate') or lapack_name.to_lower().startswith('accelerate')
+use_g77_abi = uses_mkl or uses_accelerate
 
 scipy_dir = py3.get_install_dir() / 'scipy'
 
@@ -482,12 +488,11 @@ configure_file(
   install_dir: scipy_dir,
 )
 
-generate_blas_wrapper = files('_generate_blas_wrapper.py')
-
 # Ordering of subdirs: special and linalg come first, because other submodules
 # have dependencies on cython_special.pxd and cython_linalg.pxd. After those,
 # subdirs with the most heavy builds should come first (that parallelizes
 # better)
+subdir('_build_utils')
 subdir('_lib')
 subdir('special')
 subdir('linalg')

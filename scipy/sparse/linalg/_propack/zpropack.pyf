@@ -70,7 +70,7 @@ python module _zpropack ! in
             real :: trestart
             real :: tdot
             integer :: nsing
-            common /timing/ nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot,nsing
+            common /timing/ nsing,nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot
         end subroutine zlansvd
 
         subroutine zlansvd_irl(which,jobu,jobv,m,n,dim,p,neig,maxiter,aprod,u,ldu,sigma,bnd,v,ldv,tolin,work,lwork,zwork,lzwrk,iwork,liwork,doption,ioption,info,zparm,iparm) ! in :_zpropack:PROPACK/complex16/zlansvd_irl.F
@@ -130,7 +130,7 @@ python module _zpropack ! in
             real :: trestart
             real :: tdot
             integer :: nsing
-            common /timing/ nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot,nsing
+            common /timing/ nsing,nopx,nreorth,ndot,nreorthu,nreorthv,nitref,nrestart,nbsvd,tmvopx,tgetu0,tupdmu,tupdnu,tintv,tlanbpro,treorth,treorthu,treorthv,telru,telrv,tbsvd,tnorm2,tlansvd,nlandim,tritzvec,trestart,tdot
         end subroutine zlansvd_irl
     end interface
 end python module _zpropack

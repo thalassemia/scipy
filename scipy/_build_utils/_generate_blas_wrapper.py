@@ -3,7 +3,7 @@ from operator import itemgetter
 import os
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
-LINALG_DIR = os.path.abspath(os.path.join(CURR_DIR, "linalg"))
+LINALG_DIR = os.path.abspath(os.path.join(CURR_DIR, "..", "linalg"))
 
 c_types = {'int': 'F_INT',
            'c': 'npy_complex64',
@@ -27,17 +27,13 @@ def split_signature(sig):
     return name, ret_type, args
 
 
-def filter_lines(lines, funcs):
+def filter_lines(lines):
     lines = [line for line in map(str.strip, lines)
                       if line and not line.startswith('#')]
     func_sigs = [split_signature(line) for line in lines
                                            if line.split(' ')[0] != 'void']
-    if funcs:
-        func_sigs = [f for f in func_sigs if f[0] in funcs]
     sub_sigs = [split_signature(line) for line in lines
                                           if line.split(' ')[0] == 'void']
-    if funcs:
-        sub_sigs = [f for f in sub_sigs if f[0] in funcs]
     all_sigs = list(sorted(func_sigs + sub_sigs, key=itemgetter(0)))
     return func_sigs, sub_sigs, all_sigs
 
@@ -61,17 +57,33 @@ c_func_template = """
 """
 
 
-wrapped_c_func_template = """
-void {fort_macro}({fort_name})({return_type} *ret, {args});
+complex_dot_template = """
+void BLAS_FUNC({fort_name})({f_args}, {return_type} *ret);
 {return_type} F_FUNC({name}, {upname})({args}){{
     {return_type} ret;
-    {fort_macro}({fort_name})(&ret,{f_args});
+    BLAS_FUNC({fort_name})({c_args},&ret);
     return ret;
 }}
 """
 
 
-def c_func_decl(name, return_type, args, suffix):
+ladiv_template = """
+void BLAS_FUNC({fort_name})({f_args});
+void F_FUNC({name}, {upname})({return_type} *ret, {args}){{
+    {float_type} zr, zi, xr, xi, yr, yi;
+    xr = npy_creal{f}(*x);
+    xi = npy_cimag{f}(*x);
+    yr = npy_creal{f}(*y);
+    yi = npy_cimag{f}(*y);
+    BLAS_FUNC({fort_name})(&xr, &xi, &yr, &yi, &zr, &zi);
+    NPY_CSETREAL(ret, zr);
+    NPY_CSETIMAG(ret, zi);
+}}
+"""
+
+
+def c_func_decl(name, return_type, args, suffix, g77):
+    orig_args = args
     args, f_args = make_c_args(args)
     def_args = args
     return_type = c_types[return_type]
@@ -86,12 +98,41 @@ def c_func_decl(name, return_type, args, suffix):
             def_args = ','.join(['int *n', args])
             extra_setup = 'int n = 1;'
             f_args = ','.join(['&n', f_args])
-        elif name in ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']:
-            name = 'w' + name
-            return wrapped_c_func_template.format(name=name, upname=name.upper(),
-                                                return_type=return_type, args=args,
-                                                f_args=f_args, fort_name=fort_name,
-                                                fort_macro=fort_macro)
+    if g77 and name in ['cdotc', 'cdotu', 'zdotc', 'zdotu']:
+        fort_name = f'cblas_{name}_sub'
+        name = 'w' + name
+        types, names = arg_names_and_types(orig_args)
+        types = [c_types[t] for t in types]
+        f_args = f'{types[0]} {names[0]}, {types[1]} *{names[1]}, {types[2]} {names[2]}, {types[3]} *{names[3]}, {types[4]} {names[4]}'
+        c_args = f'*{names[0]}, {names[1]}, *{names[2]}, {names[3]}, *{names[4]}'
+        return complex_dot_template.format(name=name, upname=name.upper(),
+            return_type=return_type, args=args, f_args=f_args, 
+            fort_name=fort_name, c_args=c_args)
+    if g77 and name in ['cladiv', 'zladiv']:
+        name = 'w' + name 
+        argtypes, argnames = arg_names_and_types(args)
+        f_args = []
+        if name == 'wcladiv':
+            fort_name = 'sladiv'
+            float_type = 'float'
+            f = 'f'
+            f_ret_args = ['float *retr, float * reti']
+        else:
+            fort_name = 'dladiv'
+            float_type = 'double'
+            f = ''
+            f_ret_args = ['double *retr, double * reti']
+        for argtype, argname in zip(argtypes, argnames):
+            if argtype == 'npy_complex128':
+                f_args.append(f'double *{argname}r, double *{argname}i')
+            elif argtype == 'npy_complex64':
+                f_args.append(f'float *{argname}r, float *{argname}i')
+            else:
+                f_args.append(f'{argtype} *{argname}')
+        f_args = ', '.join(f_args + f_ret_args)
+        return ladiv_template.format(name=name, upname=name.upper(), fort_name=fort_name, 
+            f_args=f_args, args=args, float_type=float_type, f=f, 
+            return_type=return_type)
     return c_func_template.format(name=name, upname=name.upper(),
                                   return_type=return_type, args=args,
                                   f_args=f_args, fort_macro=fort_macro,
@@ -126,6 +167,32 @@ c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #else
 #define F_INT int
 #endif
+
+#include <numpy/npy_math.h>
+
+#ifndef NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPLEXCOMPAT_H_
+#define NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPLEXCOMPAT_H_
+
+#ifndef NPY_CSETREALF
+#define NPY_CSETREALF(c, r) (c)->real = (r)
+#endif
+#ifndef NPY_CSETIMAGF
+#define NPY_CSETIMAGF(c, i) (c)->imag = (i)
+#endif
+#ifndef NPY_CSETREAL
+#define NPY_CSETREAL(c, r)  (c)->real = (r)
+#endif
+#ifndef NPY_CSETIMAG
+#define NPY_CSETIMAG(c, i)  (c)->imag = (i)
+#endif
+#ifndef NPY_CSETREALL
+#define NPY_CSETREALL(c, r) (c)->real = (r)
+#endif
+#ifndef NPY_CSETIMAGL
+#define NPY_CSETIMAGL(c, i) (c)->imag = (i)
+#endif
+
+#endif
 """
 
 lapack_decls = """
@@ -153,43 +220,40 @@ c_end = """
 #endif
 """
 
+comments = ["This file was generated by _generate_pyx.py.\n",
+            "Do not edit this file directly.\n"]
+ccomment = ''.join(['/* ' + line.rstrip() + ' */\n'
+                    for line in comments]) + '\n'
 
-def generate_c_header(func_sigs, sub_sigs, all_sigs, lib_name, suffix):
-    funcs = "".join(c_func_decl(sig[0], sig[1], sig[2], suffix) for sig in func_sigs)
-    subs = "\n" + "".join(c_sub_decl(sig[0], sig[1], sig[2], suffix) for sig in sub_sigs)
+
+def generate_c_files(func_sigs, sub_sigs, all_sigs, lib_name, suffix, g77, outdir):
     if lib_name == 'LAPACK':
         preamble = (c_preamble.format(lib=lib_name) + lapack_decls)
     else:
         preamble = c_preamble.format(lib=lib_name)
-    return "".join([preamble, cpp_guard, funcs, subs, c_end])
+    for sig in func_sigs:
+        func = c_func_decl(*(sig+(suffix, g77)))
+        with open(os.path.join(outdir, f'_{sig[0]}.c'), 'w') as func_file:
+            func_file.writelines("".join([ccomment, preamble, cpp_guard, func, c_end]))
+    for sig in sub_sigs:
+        sub = c_sub_decl(*(sig+(suffix,)))
+        with open(os.path.join(outdir, f'_{sig[0]}.c'), 'w') as sub_file:
+            sub_file.writelines("".join([ccomment, preamble, cpp_guard, sub, c_end]))
 
 
 def make_all(outdir,
              blas_signature_file=os.path.join(LINALG_DIR, "cython_blas_signatures.txt"),
              lapack_signature_file=os.path.join(LINALG_DIR, "cython_lapack_signatures.txt"),
              suffix='',
-             name='subroutines',
-             funcs=None):
-    blas_header_name = f'_blas_{name}.c'
-    lapack_header_name = f'_lapack_{name}.c'
-    comments = ["This file was generated by _generate_pyx.py.\n",
-                "Do not edit this file directly.\n"]
-    ccomment = ''.join(['/* ' + line.rstrip() + ' */\n'
-                        for line in comments]) + '\n'
+             g77=False):
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
-    blas_sigs = filter_lines(blas_sigs, funcs)
-    blas_c_header = generate_c_header(*(blas_sigs + ('BLAS', suffix)))
-    with open(os.path.join(outdir, blas_header_name), 'w') as f:
-        f.write(ccomment)
-        f.write(blas_c_header)
+    blas_sigs = filter_lines(blas_sigs)
+    generate_c_files(*(blas_sigs + ('BLAS', suffix, g77, outdir)))
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
-    lapack_sigs = filter_lines(lapack_sigs, funcs)
-    lapack_c_header = generate_c_header(*(lapack_sigs + ('LAPACK', suffix)))
-    with open(os.path.join(outdir, lapack_header_name), 'w') as f:
-        f.write(ccomment)
-        f.write(lapack_c_header)
+    lapack_sigs = filter_lines(lapack_sigs)
+    generate_c_files(*(lapack_sigs + ('LAPACK', suffix, g77, outdir)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -197,10 +261,8 @@ if __name__ == '__main__':
                         help="Path to the output directory")
     parser.add_argument("-s", "--suffix", type=str,
                         help="Suffix for Apple Accelerate")
-    parser.add_argument("-n", "--name", type=str, default='subroutines',
-                        help="Suffix for output files")
-    parser.add_argument("-f", "--funcs", type=str, nargs="+",
-                        help="Names of all funcs to wrap")
+    parser.add_argument("-g", "--g77", type=str, default=False,
+                        help="Whether to generate g77 wrappers")
     args = parser.parse_args()
 
     if not args.outdir:
@@ -210,4 +272,4 @@ if __name__ == '__main__':
     else:
         outdir_abs = os.path.join(os.getcwd(), args.outdir)
 
-    make_all(outdir_abs, suffix=args.suffix, funcs=args.funcs, name=args.name)
+    make_all(outdir_abs, suffix=args.suffix, g77=args.g77)

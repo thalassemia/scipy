@@ -98,24 +98,12 @@ dop_lib = static_library('dop_lib',
   fortran_args: [fortran_ignore_warnings, _fortran_64_bit_int]
 )
 
-quadpack_blas_wrapper = custom_target('quadpack_blas_wrapper',
-  output: [
-    '_blas_quadpack.c',
-    '_lapack_quadpack.c'
-  ],
-  command: [py3, generate_blas_wrapper, '-f', 'dgtsv', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'quadpack'],
-  depend_files: [
-    '../linalg/cython_blas_signatures.txt',
-    '../linalg/cython_lapack_signatures.txt',
-  ]
-)
-
 py3.extension_module('_quadpack',
-  ['__quadpack.h', '_quadpackmodule.c', quadpack_blas_wrapper],
+  ['__quadpack.h', '_quadpackmodule.c'],
   c_args: numpy_nodepr_api,
   fortran_args: fortran_ignore_warnings,
   include_directories: ['../_lib/src', '../linalg'],
-  link_with: [quadpack_lib, mach_lib],
+  link_with: [quadpack_lib, mach_lib, blas_lapack_wrapper_lib],
   link_args: version_link_args,
   dependencies: [lapack, np_dep],
   install: true,
@@ -123,23 +111,11 @@ py3.extension_module('_quadpack',
   subdir: 'scipy/integrate',
 )
 
-odepack_blas_wrapper = custom_target('odepack_blas_wrapper',
-  output: [
-    '_blas_odepack.c',
-    '_lapack_odepack.c'
-  ],
-  command: [py3, generate_blas_wrapper, '-f', 'dgetrf' ,'dgetrs' ,'dgbtrf' ,'dgbtrs', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'odepack'],
-  depend_files: [
-    '../linalg/cython_blas_signatures.txt',
-    '../linalg/cython_lapack_signatures.txt',
-  ]
-)
-
 py3.extension_module('_odepack',
-  ['_odepackmodule.c', odepack_blas_wrapper],
+  '_odepackmodule.c',
   c_args: numpy_nodepr_api,
   fortran_args: fortran_ignore_warnings,
-  link_with: [lsoda_lib, mach_lib],
+  link_with: [lsoda_lib, mach_lib, blas_lapack_wrapper_lib],
   link_args: version_link_args,
   dependencies: [lapack, np_dep],
   install: true,
@@ -148,28 +124,17 @@ py3.extension_module('_odepack',
   include_directories: ['../linalg']
 )
 
-vode_blas_wrapper = custom_target('vode_blas_wrapper',
-  output: [
-    '_blas_vode.c',
-    '_lapack_vode.c'
-  ],
-  command: [py3, generate_blas_wrapper, '-f', 'dgetrf', 'dgetrs', 'dgbtrf', 'dgbtrs', 'zgetrf', 'zgetrs', 'zgbtrf', 'zgbtrs', 'daxpy', 'dscal', 'dcopy', 'zcopy', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'vode'],
-  depend_files: [
-    '../linalg/cython_blas_signatures.txt',
-    '../linalg/cython_lapack_signatures.txt',
-  ]
-)
-
 vode_module = custom_target('vode_module',
   output: ['_vode-f2pywrappers.f', '_vodemodule.c'],
   input: 'vode.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 py3.extension_module('_vode',
-  [vode_module, vode_blas_wrapper],
-  link_with: [vode_lib],
+  vode_module,
+  link_with: [vode_lib, blas_lapack_wrapper_lib],
   c_args: [numpy_nodepr_api, Wno_unused_variable],
+  fortran_args: _fortran_64_bit_int,
   link_args: version_link_args,
   dependencies: [lapack, blas, fortranobject_dep, np_dep],
   install: true,
@@ -181,13 +146,14 @@ py3.extension_module('_vode',
 lsoda_module = custom_target('lsoda_module',
   output: ['_lsoda-f2pywrappers.f', '_lsodamodule.c'],
   input: 'lsoda.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 py3.extension_module('_lsoda',
-  [lsoda_module, odepack_blas_wrapper],
-  link_with: [lsoda_lib, mach_lib],
+  lsoda_module,
+  link_with: [lsoda_lib, mach_lib, blas_lapack_wrapper_lib],
   c_args: [numpy_nodepr_api, Wno_unused_variable],
+  fortran_args: _fortran_64_bit_int,
   dependencies: [lapack, fortranobject_dep, np_dep],
   link_args: version_link_args,
   install: true,
@@ -199,13 +165,14 @@ py3.extension_module('_lsoda',
 _dop_module = custom_target('_dop_module',
   output: ['_dop-f2pywrappers.f', '_dopmodule.c'],
   input: 'dop.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 py3.extension_module('_dop',
   _dop_module,
   link_with: [dop_lib],
   c_args: [numpy_nodepr_api, Wno_unused_variable],
+  fortran_args: _fortran_64_bit_int,
   dependencies: [fortranobject_dep],
   link_args: version_link_args,
   install: true,
@@ -223,14 +190,14 @@ py3.extension_module('_test_multivariate',
 _test_odeint_banded_module = custom_target('_test_odeint_banded_module',
   output: ['_test_odeint_bandedmodule.c', '_test_odeint_banded-f2pywrappers.f'],
   input: 'tests/banded5x5.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 py3.extension_module('_test_odeint_banded',
-  ['tests/banded5x5.f', _test_odeint_banded_module, odepack_blas_wrapper],
+  ['tests/banded5x5.f', _test_odeint_banded_module],
   c_args: numpy_nodepr_api,
-  link_with: [lsoda_lib, mach_lib],
-  fortran_args: _fflag_Wno_unused_dummy_argument,
+  link_with: [lsoda_lib, mach_lib, blas_lapack_wrapper_lib],
+  fortran_args: [_fflag_Wno_unused_dummy_argument, _fortran_64_bit_int],
   link_args: version_link_args,
   dependencies: [lapack, fortranobject_dep, np_dep],
   install: true,

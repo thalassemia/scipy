@@ -16,6 +16,8 @@ from scipy.linalg.cython_lapack cimport dgeev
 
 include "_poly_common.pxi"
 
+from numpy cimport npy_int64
+
 DEF MAX_DIMS = 64
 
 #------------------------------------------------------------------------------
@@ -746,8 +748,8 @@ cdef int croots_poly1(const double[:,:,::1] c, double y, int ci, int cj,
     cdef double *a
     cdef double *work
     cdef double a0, a1, a2, d, br, bi, cc
-    cdef int lwork, n, i, j, order
-    cdef int nworkspace, info
+    cdef {{ i_type }} lwork, n, i, j, order
+    cdef {{ i_type }} nworkspace, info
 
     n = c.shape[0]
 

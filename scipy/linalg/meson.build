@@ -15,7 +15,9 @@ cython_linalg = custom_target('cython_linalg',
     '_lapack_subroutine_wrappers.f'
   ],
   input: '_generate_pyx.py',
-  command: [py3, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-i', blas_int_type],
+  command: [py3, '@INPUT@', '-o', '@OUTDIR@', 
+    '-s', blas_symbol_suffix, '-i', blas_int_type,
+    '-g', use_g77_abi.to_string()],
   depend_files: [
     'cython_blas_signatures.txt',
     'cython_lapack_signatures.txt',
@@ -56,44 +58,79 @@ linalg_cython_gen = generator(cython,
   depends : [_cython_tree, __init__py, cython_blas_pxd])#, cython_linalg])
 
 # fblas
+if use_ilp64
+  fblas_module = custom_target('fblas_64_module',
+    output: ['_fblas_64module.c', '_fblas_64-f2pywrappers.f'],
+    input: 'fblas_64.pyf.src',
+    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', 'true']
+  )
+  # Note: we're linking LAPACK on purpose here. For some routines (e.g., spmv)
+  # the float/double routines are in BLAS while the complex routines are in
+  # LAPACK - we have historically put these in `_fblas`.
+  py3.extension_module('_fblas_64',
+    fblas_module,
+    c_args: numpy_nodepr_api,
+    link_args: version_link_args,
+    dependencies: [lapack, blas, fortranobject_dep],
+    link_with: blas_lapack_wrapper_lib,
+    install: true,
+    subdir: 'scipy/linalg'
+  )
+endif
 fblas_module = custom_target('fblas_module',
   output: ['_fblasmodule.c', '_fblas-f2pywrappers.f'],
   input: 'fblas.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix + fblas_symbol_suffix]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
-
 # Note: we're linking LAPACK on purpose here. For some routines (e.g., spmv)
 # the float/double routines are in BLAS while the complex routines are in
 # LAPACK - we have historically put these in `_fblas`.
 py3.extension_module('_fblas',
   fblas_module,
-  c_args: [numpy_nodepr_api, append_fortran],
+  c_args: numpy_nodepr_api,
   link_args: version_link_args,
   dependencies: [lapack, blas, fortranobject_dep],
+  link_with: blas_lapack_wrapper_lib,
   install: true,
-  link_language: 'fortran',
-  fortran_args: '-fdollar-ok',
   subdir: 'scipy/linalg'
 )
 
 # flapack
 
+if use_ilp64
+  flapack_module = custom_target('flapack_64_module',
+    output: ['_flapack_64module.c', '_flapack_64-f2pywrappers.f'],
+    input: 'flapack_64.pyf.src',
+    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', 'true']
+  )
+
+  # Note that -Wno-empty-body is Clang-specific and comes from `callstatement`s
+  # in flapack_other.pyf.src
+  py3.extension_module('_flapack_64',
+    flapack_module,
+    c_args: [numpy_nodepr_api, Wno_empty_body],
+    link_args: version_link_args,
+    dependencies: [lapack, blas, fortranobject_dep],
+    link_with: blas_lapack_wrapper_lib,
+    install: true,
+    subdir: 'scipy/linalg'
+  )
+endif
 flapack_module = custom_target('flapack_module',
   output: ['_flapackmodule.c', '_flapack-f2pywrappers.f'],
   input: 'flapack.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-s', blas_symbol_suffix + fblas_symbol_suffix]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 # Note that -Wno-empty-body is Clang-specific and comes from `callstatement`s
 # in flapack_other.pyf.src
 py3.extension_module('_flapack',
   flapack_module,
-  c_args: [numpy_nodepr_api, Wno_empty_body, append_fortran],
+  c_args: [numpy_nodepr_api, Wno_empty_body],
   link_args: version_link_args,
   dependencies: [lapack, blas, fortranobject_dep],
+  link_with: blas_lapack_wrapper_lib,
   install: true,
-  link_language: 'fortran',
-  fortran_args: '-fdollar-ok',
   subdir: 'scipy/linalg'
 )
 
@@ -103,12 +140,13 @@ py3.extension_module('_flapack',
 flinalg_module = custom_target('flinalg_module',
   output: '_flinalgmodule.c',
   input: ['src/flinalg.pyf'],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
 )
 
 py3.extension_module('_flinalg',
   ['src/det.f', 'src/lu.f', flinalg_module],
   c_args: numpy_nodepr_api,
+  fortran_args: _fortran_64_bit_int,
   link_args: version_link_args,
   dependencies: [lapack, fortranobject_dep],
   install: true,
@@ -223,8 +261,14 @@ cython_lapack = py3.extension_module('cython_lapack',
   subdir: 'scipy/linalg'
 )
 
+_decomp_lu_cython_pyx = custom_target('_decomp_lu_cython',
+  output: '_decomp_lu_cython.pyx',
+  input: '_decomp_lu_cython.pyx.in',
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+)
+
 py3.extension_module('_decomp_lu_cython',
-  linalg_cython_gen.process('_decomp_lu_cython.pyx'),
+  linalg_cython_gen.process(_decomp_lu_cython_pyx),
   c_args: cython_c_args,
   dependencies: np_dep,
   link_args: version_link_args,
@@ -235,7 +279,7 @@ py3.extension_module('_decomp_lu_cython',
 _decomp_update_pyx = custom_target('_decomp_update',
   output: '_decomp_update.pyx',
   input: '_decomp_update.pyx.in',
-  command: [py3, tempita, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
 )
 
 py3.extension_module('_decomp_update',
@@ -251,7 +295,7 @@ py3.extension_module('_decomp_update',
 _matfuncs_expm_pyx = custom_target('_matfuncs_expm',
   output: '_matfuncs_expm.pyx',
   input: '_matfuncs_expm.pyx.in',
-  command: [py3, tempita, '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
 )
 
 py3.extension_module('_matfuncs_expm',
@@ -263,8 +307,14 @@ py3.extension_module('_matfuncs_expm',
   subdir: 'scipy/linalg'
 )
 
+_cythonized_array_utils_pyx = custom_target('_cythonized_array_utils',
+  output: '_cythonized_array_utils.pyx',
+  input: '_cythonized_array_utils.pyx.in',
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+)
+
 _cythonized_array_utils = py3.extension_module('_cythonized_array_utils',
-  linalg_init_utils_cython_gen.process('_cythonized_array_utils.pyx'),
+  linalg_init_utils_cython_gen.process(_cythonized_array_utils_pyx),
   c_args: [cython_c_args, Wno_maybe_uninitialized],
   dependencies: [np_dep, blas],
   link_args: version_link_args,

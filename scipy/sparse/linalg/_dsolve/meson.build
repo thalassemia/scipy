@@ -193,22 +193,10 @@ superlu_lib = static_library('superlu_lib',
   include_directories: ['SuperLU/SRC']
 )
 
-superlu_blas_wrapper = custom_target('superlu_blas_wrapper',
-  output: [
-    '_blas_superlu.c',
-    '_lapack_superlu.c'
-  ],
-  command: [py3, generate_blas_wrapper, '-f', 'sswap', 'saxpy', 'sasum', 'isamax', 'scopy', 'sscal', 'sger', 'snrm2', 'ssymv', 'sdot', 'saxpy', 'ssyr2', 'srot', 'sgemv', 'strsv', 'sgemm', 'strsm', 'dswap', 'daxpy', 'dasum', 'idamax', 'dcopy', 'dscal', 'dger', 'dnrm2', 'dsymv', 'ddot', 'dsyr2', 'drot', 'dgemv', 'dtrsv', 'dgemm', 'dtrsm', 'cswap', 'caxpy', 'scasum', 'icamax', 'ccopy', 'cscal', 'scnrm2', 'cgemv', 'ctrsv', 'cgemm', 'ctrsm', 'cgerc', 'chemv', 'cher2', 'zswap', 'zaxpy', 'dzasum', 'izamax', 'zcopy', 'zscal', 'dznrm2', 'zgemv', 'ztrsv', 'zgemm', 'ztrsm', 'zgerc', 'zhemv', 'zher2', 'dlacon', 'slacon', 'icmax1', 'scsum1', 'clacon', 'dzsum1', 'izmax1', 'zlacon', '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-n', 'superlu'],
-  depend_files: [
-    '../../../linalg/cython_blas_signatures.txt',
-    '../../../linalg/cython_lapack_signatures.txt',
-  ]
-)
-
 _superlu = py3.extension_module('_superlu',
-  ['_superlumodule.c', '_superlu_utils.c', '_superluobject.c', superlu_blas_wrapper],
+  ['_superlumodule.c', '_superlu_utils.c', '_superluobject.c'],
   c_args: numpy_nodepr_api,
-  link_with: [superlu_lib],
+  link_with: [superlu_lib, blas_lapack_wrapper_lib],
   include_directories: ['SuperLU/SRC', '../../../linalg/'],
   link_args: version_link_args,
   dependencies: [lapack, blas, np_dep],

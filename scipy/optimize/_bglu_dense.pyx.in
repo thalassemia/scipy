@@ -13,6 +13,8 @@ except ImportError:
 
 np.import_array()
 
+from numpy cimport npy_int64
+
 __all__ = ['LU', 'BGLU']
 
 @cython.boundscheck(False)
@@ -25,8 +27,8 @@ cdef void swap_rows(self, double[:, ::1] H, int i) noexcept:
     # Python
     # H[[i, i+1]] = H[[i+1, i]]
     # Cython, using BLAS
-    cdef int n = H.shape[1]-i
-    cdef int one = 1
+    cdef {{ i_type }} n = H.shape[1]-i
+    cdef {{ i_type }} one = 1
     dswap(&n, &H[i, i], &one, &H[i+1, i], &one)
 
 @cython.boundscheck(False)
@@ -43,9 +45,9 @@ cdef double row_subtract(self, double[:, ::1] H, int i) noexcept:
     # Python
     # H[i+1, i:] -= g*H[i, i:]
     # Cython, using BLAS
-    cdef int n = H.shape[1]-i
+    cdef {{ i_type }} n = H.shape[1]-i
     cdef double ng = -g
-    cdef int one = 1
+    cdef {{ i_type }} one = 1
     daxpy(&n, &ng, &H[i, i], &one, &H[i+1, i], &one)
 
     return g

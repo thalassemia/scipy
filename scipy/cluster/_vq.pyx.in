@@ -14,6 +14,8 @@ from scipy.linalg.cython_blas cimport dgemm, sgemm
 
 from libc.math cimport sqrt
 
+from numpy cimport npy_int64
+
 ctypedef np.float64_t float64_t
 ctypedef np.float32_t float32_t
 ctypedef np.int32_t int32_t
@@ -32,15 +34,15 @@ DEF NFEATURES_CUTOFF=5
 np.import_array()
 
 
-cdef inline vq_type vec_sqr(int n, vq_type *p) noexcept:
+cdef inline vq_type vec_sqr({{ i_type }} n, vq_type *p) noexcept:
     cdef vq_type result = 0.0
-    cdef int i
+    cdef {{ i_type }} i
     for i in range(n):
         result += p[i] * p[i]
     return result
 
 
-cdef inline void cal_M(int nobs, int ncodes, int nfeat, vq_type *obs,
+cdef inline void cal_M({{ i_type }} nobs, {{ i_type }} ncodes, {{ i_type }} nfeat, vq_type *obs,
                        vq_type *code_book, vq_type *M) noexcept:
     """
     Calculate M = obs * code_book.T
@@ -57,8 +59,8 @@ cdef inline void cal_M(int nobs, int ncodes, int nfeat, vq_type *obs,
               &alpha, code_book, &nfeat, obs, &nfeat, &beta, M, &ncodes)
 
 
-cdef int _vq(vq_type *obs, vq_type *code_book,
-             int ncodes, int nfeat, int nobs,
+cdef {{ i_type }} _vq(vq_type *obs, vq_type *code_book,
+             {{ i_type }} ncodes, {{ i_type }} nfeat, {{ i_type }} nobs,
              int32_t *codes, vq_type *low_dist) except -1:
     """
     The underlying function (template) of _vq.vq.
@@ -136,7 +138,7 @@ cdef int _vq(vq_type *obs, vq_type *code_book,
 
 
 cdef void _vq_small_nf(vq_type *obs, vq_type *code_book,
-                       int ncodes, int nfeat, int nobs,
+                       {{ i_type }} ncodes, {{ i_type }} nfeat, {{ i_type }} nobs,
                        int32_t *codes, vq_type *low_dist) noexcept:
     """
     Vector quantization using naive algorithm.
@@ -194,7 +196,7 @@ def vq(np.ndarray obs, np.ndarray codes):
     same number of columns (features). Only 1-dimensional and 2-dimensional
     arrays are supported.
     """
-    cdef int nobs, ncodes, nfeat
+    cdef {{ i_type }} nobs, ncodes, nfeat
     cdef np.ndarray outcodes, outdists
 
     # Ensure the arrays are contiguous
@@ -243,7 +245,7 @@ def vq(np.ndarray obs, np.ndarray codes):
 
 @cython.cdivision(True)
 cdef np.ndarray _update_cluster_means(vq_type *obs, int32_t *labels,
-                                      vq_type *cb, int nobs, int nc, int nfeat) noexcept:
+                                      vq_type *cb, {{ i_type }} nobs, {{ i_type }} nc, {{ i_type }} nfeat) noexcept:
     """
     The underlying function (template) of _vq.update_cluster_means.
 
@@ -301,7 +303,7 @@ cdef np.ndarray _update_cluster_means(vq_type *obs, int32_t *labels,
     return obs_count > 0
 
 
-def update_cluster_means(np.ndarray obs, np.ndarray labels, int nc):
+def update_cluster_means(np.ndarray obs, np.ndarray labels, {{ i_type }} nc):
     """
     The update-step of K-means. Calculate the mean of observations in each
     cluster.
@@ -330,7 +332,7 @@ def update_cluster_means(np.ndarray obs, np.ndarray labels, int nc):
     how to deal with them.
     """
     cdef np.ndarray has_members, cb
-    cdef int nfeat
+    cdef {{ i_type }} nfeat
 
     # Ensure the arrays are contiguous
     obs = np.ascontiguousarray(obs)
