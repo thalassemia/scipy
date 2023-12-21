@@ -13,27 +13,27 @@ type_include = """
 #endif
 /* Define my integer type int_t */
 #ifdef HAVE_BLAS_ILP64
-      #define INT_TYPE int64_t
-      #define UINT_TYPE uint64_t
+#define NPY_INT_TYPE NPY_INT64
+typedef int64_t int_t;
+typedef uint64_t uint_t;
 #else
-      #define INT_TYPE int
-      #define UINT_TYPE unsigned int
+#define NPY_INT_TYPE NPY_INT
+typedef int int_t;
+typedef unsigned int uint_t;
 #endif
-typedef INT_TYPE int_t;
-typedef UINT_TYPE uint_t;
 """
 
 def replace_types(src_files, out_dir):
     for src_file in src_files:
-        code = [type_include]
+        code = []
         with open(src_file, "r") as f:
             code += f.readlines()
         code = "".join(code)
         code = uint_re.sub(lambda mobj: 'uint_t', code)
         code = int_re.sub(lambda mobj: 'int_t', code)
+        code = "".join([type_include, code])
         with open(os.path.join(out_dir, os.path.split(src_file)[1]), "w") as f:
             f.writelines(code)
-        print(os.path.join(out_dir, os.path.split(src_file)[1]))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -13,49 +13,49 @@ Util = ['iterative/getbreak.f.src']
 methods_f_0 = custom_target('methods_f_0',
   output: ['BiCGREVCOM.f'],
   input: [methods[0]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 methods_f_1 = custom_target('methods_f_1',
   output: ['BiCGSTABREVCOM.f'],
   input: [methods[1]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 methods_f_2 = custom_target('methods_f_2',
   output: ['CGREVCOM.f'],
   input: [methods[2]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 methods_f_3 = custom_target('methods_f_3',
   output: ['CGSREVCOM.f'],
   input: [methods[3]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 methods_f_4 = custom_target('methods_f_4',
   output: ['GMRESREVCOM.f'],
   input: [methods[4]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 methods_f_5 = custom_target('methods_f_5',
   output: ['QMRREVCOM.f'],
   input: [methods[5]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 Util_f_0 = custom_target('Util_f_0',
   output: ['getbreak.f'],
   input: [Util[0]],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 _iterative_module = custom_target('_iterative_module',
   output: ['_iterative.pyf', '_iterativemodule.c'],
   input: 'iterative/_iterative.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 _iterative = py3.extension_module('_iterative',

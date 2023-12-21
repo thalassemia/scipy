@@ -20,6 +20,8 @@ import numpy as np
 from scipy._lib._util import check_random_state
 from scipy.sparse.linalg import aslinearoperator
 from scipy.linalg import LinAlgError
+from scipy.io import _test_fortran
+F_INT_TYPE = _test_fortran.types.intvar.dtype
 
 from ._propack import _spropack  # type: ignore[attr-defined]
 from ._propack import _dpropack  # type: ignore[attr-defined]
@@ -261,7 +263,7 @@ def _svdp(A, k, which='LM', irl_mode=True, kmax=None,
     else:
         doption = np.array((delta, eta, anorm), dtype=typ.lower())
 
-    ioption = np.array((int(bool(cgs)), int(bool(elr))), dtype='i')
+    ioption = np.array((int(bool(cgs)), int(bool(elr))), dtype=F_INT_TYPE)
 
     # If computing `u` or `v` (left and right singular vectors,
     # respectively), `blocksize` controls how large a fraction of the
@@ -283,11 +285,11 @@ def _svdp(A, k, which='LM', irl_mode=True, kmax=None,
         lwork = m + n + 9*kmax + 2*kmax*kmax + 4 + max(m + n, 4*kmax + 4)
         liwork = 2*kmax + 1
     work = np.empty(lwork, dtype=typ.lower())
-    iwork = np.empty(liwork, dtype=np.int32)
+    iwork = np.empty(liwork, dtype=F_INT_TYPE)
 
     # dummy arguments: these are passed to aprod, and not used in this wrapper
     dparm = np.empty(1, dtype=typ.lower())
-    iparm = np.empty(1, dtype=np.int32)
+    iparm = np.empty(1, dtype=F_INT_TYPE)
 
     if typ.isupper():
         # PROPACK documentation is unclear on the required length of zwork.

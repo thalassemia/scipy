@@ -152,7 +152,7 @@ _fitpack = py3.extension_module('_fitpack',
 dfitpack_module = custom_target('dfitpack_module',
   output: ['dfitpack-f2pywrappers.f', 'dfitpackmodule.c'],
   input: 'src/fitpack.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
 )
 
 # TODO: Add flags for 64 bit ints

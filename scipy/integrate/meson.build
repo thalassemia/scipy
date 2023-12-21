@@ -127,7 +127,7 @@ py3.extension_module('_odepack',
 vode_module = custom_target('vode_module',
   output: ['_vode-f2pywrappers.f', '_vodemodule.c'],
   input: 'vode.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 py3.extension_module('_vode',
@@ -146,7 +146,7 @@ py3.extension_module('_vode',
 lsoda_module = custom_target('lsoda_module',
   output: ['_lsoda-f2pywrappers.f', '_lsodamodule.c'],
   input: 'lsoda.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 py3.extension_module('_lsoda',
@@ -165,7 +165,7 @@ py3.extension_module('_lsoda',
 _dop_module = custom_target('_dop_module',
   output: ['_dop-f2pywrappers.f', '_dopmodule.c'],
   input: 'dop.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 py3.extension_module('_dop',
@@ -190,7 +190,7 @@ py3.extension_module('_test_multivariate',
 _test_odeint_banded_module = custom_target('_test_odeint_banded_module',
   output: ['_test_odeint_bandedmodule.c', '_test_odeint_banded-f2pywrappers.f'],
   input: 'tests/banded5x5.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 py3.extension_module('_test_odeint_banded',

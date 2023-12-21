@@ -62,7 +62,7 @@ if use_ilp64
   fblas_module = custom_target('fblas_64_module',
     output: ['_fblas_64module.c', '_fblas_64-f2pywrappers.f'],
     input: 'fblas_64.pyf.src',
-    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', 'true']
+    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i']
   )
   # Note: we're linking LAPACK on purpose here. For some routines (e.g., spmv)
   # the float/double routines are in BLAS while the complex routines are in
@@ -80,7 +80,7 @@ endif
 fblas_module = custom_target('fblas_module',
   output: ['_fblasmodule.c', '_fblas-f2pywrappers.f'],
   input: 'fblas.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 # Note: we're linking LAPACK on purpose here. For some routines (e.g., spmv)
 # the float/double routines are in BLAS while the complex routines are in
@@ -101,7 +101,7 @@ if use_ilp64
   flapack_module = custom_target('flapack_64_module',
     output: ['_flapack_64module.c', '_flapack_64-f2pywrappers.f'],
     input: 'flapack_64.pyf.src',
-    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', 'true']
+    command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i']
   )
 
   # Note that -Wno-empty-body is Clang-specific and comes from `callstatement`s
@@ -119,7 +119,7 @@ endif
 flapack_module = custom_target('flapack_module',
   output: ['_flapackmodule.c', '_flapack-f2pywrappers.f'],
   input: 'flapack.pyf.src',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 # Note that -Wno-empty-body is Clang-specific and comes from `callstatement`s
@@ -140,7 +140,7 @@ py3.extension_module('_flapack',
 flinalg_module = custom_target('flinalg_module',
   output: '_flinalgmodule.c',
   input: ['src/flinalg.pyf'],
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 py3.extension_module('_flinalg',

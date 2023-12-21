@@ -167,6 +167,7 @@ blas_symbol_suffix = ''
 fblas_symbol_suffix = blas_name
 _fortran_64_bit_int = []
 blas_int_type = 'int'
+f2py_64_bit_int_flag = []
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
 # that too to make the fallback detection with CMake work
 _args_blas = []
@@ -176,6 +177,7 @@ if blas_name == 'openblas'
     _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME', '-DHAVE_BLAS_ILP64']
     _fortran_64_bit_int += ['-fdefault-integer-8']
     blas_int_type = 'npy_int64'
+    f2py_64_bit_int_flag += '-i'
   endif
   blas = dependency(['openblas', 'OpenBLAS'], compile_args: _args_blas)
 elif blas_name == 'accelerate'
@@ -186,6 +188,7 @@ elif blas_name == 'accelerate'
       blas_symbol_suffix = '$NEWLAPACK$ILP64'
       _fortran_64_bit_int += ['-fdefault-integer-8']
       blas_int_type = 'npy_int64'
+      f2py_64_bit_int_flag += '-i'
     endif
     fblas_symbol_suffix = ''
     blas = declare_dependency(

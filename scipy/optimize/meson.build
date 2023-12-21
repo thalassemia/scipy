@@ -96,7 +96,7 @@ py3.extension_module('_zeros',
 lbfgsb_module = custom_target('lbfgsb_module',
   output: ['_lbfgsb-f2pywrappers.f', '_lbfgsbmodule.c'],
   input: 'lbfgsb_src/lbfgsb.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 _lbfgsb = py3.extension_module('_lbfgsb',

@@ -259,7 +259,7 @@ def main():
                         help="Path to the input file")
     parser.add_argument("-o", "--outdir", type=str,
                         help="Path to the output directory")
-    parser.add_argument("-i", "--int64", type=bool,
+    parser.add_argument("-i", "--int64", action="store_true",
                         help="Use 64-bit Fortran int",
                         default=False)
     args = parser.parse_args()

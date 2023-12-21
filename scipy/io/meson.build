@@ -1,7 +1,7 @@
 _test_fortran_module = custom_target('_test_fortran_module',
   output: ['_test_fortranmodule.c', '_test_fortran-f2pywrappers.f'],
   input: '_test_fortran.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', '-i', use_ilp64.to_string()]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 
 _test_fortran = py3.extension_module('_test_fortran',

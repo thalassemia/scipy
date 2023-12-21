@@ -1301,7 +1301,7 @@ def lstsq(a, b, cond=None, overwrite_a=False, overwrite_b=False,
 
     elif driver == 'gelsy':
         lwork = _compute_lwork(lapack_lwork, m, n, nrhs, cond)
-        jptv = np.zeros((a1.shape[1], 1), dtype=np.int32)
+        jptv = np.zeros((a1.shape[1], 1), dtype=lapack_func.int_dtype)
         v, x, j, rank, info = lapack_func(a1, b1, jptv, cond,
                                           lwork, False, False)
         if info < 0:
