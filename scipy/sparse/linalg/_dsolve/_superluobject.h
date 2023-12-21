@@ -16,11 +16,11 @@
 #undef c_abs
 #endif
 
-#include "SuperLU/SRC/slu_zdefs.h"
+#include "slu_zdefs.h"
 #include "numpy/ndarrayobject.h"
-#include "SuperLU/SRC/slu_util.h"
-#include "SuperLU/SRC/slu_dcomplex.h"
-#include "SuperLU/SRC/slu_scomplex.h"
+#include "slu_util.h"
+#include "slu_dcomplex.h"
+#include "slu_scomplex.h"
 
 
 #define _CHECK_INTEGER(x) (PyArray_ISINTEGER((PyArrayObject*)x) && PyArray_ITEMSIZE((PyArrayObject*)x) == sizeof(int))
@@ -53,9 +53,9 @@ extern PyTypeObject SuperLUGlobalType;
 
 int DenseSuper_from_Numeric(SuperMatrix *, PyObject *);
 int NRFormat_from_spMatrix(SuperMatrix *, int, int, int, PyArrayObject *,
-			   PyArrayObject *, PyArrayObject *, int);
+			   PyArrayObject *, PyArrayObject *, int, int);
 int NCFormat_from_spMatrix(SuperMatrix *, int, int, int, PyArrayObject *,
-			   PyArrayObject *, PyArrayObject *, int);
+			   PyArrayObject *, PyArrayObject *, int, int);
 int LU_to_csc_matrix(SuperMatrix *L, SuperMatrix *U,
                      PyObject **L_csc, PyObject **U_csc,
                      PyObject *py_csc_construct_func);

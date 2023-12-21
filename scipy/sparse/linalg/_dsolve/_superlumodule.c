@@ -75,15 +75,15 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     volatile PyArrayObject *Py_X = NULL;
     volatile PyArrayObject *nzvals = NULL;
     volatile PyArrayObject *colind = NULL, *rowptr = NULL;
-    volatile int N, nnz;
+    volatile int N_capi, nnz_capi;
     volatile int info;
-    volatile int csc = 0;
+    volatile int csc_capi = 0;
     volatile int *perm_r = NULL, *perm_c = NULL;
     volatile SuperMatrix A = { 0 }, B = { 0 }, L = { 0 }, U = { 0 };
     volatile superlu_options_t options = { 0 };
     volatile SuperLUStat_t stat = { 0 };
     volatile PyObject *option_dict = NULL;
-    volatile int type;
+    volatile int type, int_type;
     volatile jmp_buf *jmpbuf_ptr;
     SLU_BEGIN_THREADS_DEF;
 
@@ -94,11 +94,14 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
 
     /* Get input arguments */
     if (!PyArg_ParseTupleAndKeywords(args, kwdict, "iiO!O!O!O|iO", kwlist,
-				     &N, &nnz, &PyArray_Type, &nzvals,
+				     &N_capi, &nnz_capi, &PyArray_Type, &nzvals,
 				     &PyArray_Type, &colind, &PyArray_Type,
-				     &rowptr, &Py_B, &csc, &option_dict)) {
+				     &rowptr, &Py_B, &csc_capi, &option_dict)) {
 	return NULL;
     }
+    volatile int_t N = (int_t)N_capi;
+    volatile int_t nnz = (int_t)nnz_capi;
+    volatile int_t csc = (int_t)csc_capi;
 
     if (!_CHECK_INTEGER(colind) || !_CHECK_INTEGER(rowptr)) {
 	PyErr_SetString(PyExc_TypeError,
@@ -107,6 +110,7 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     }
 
     type = PyArray_TYPE((PyArrayObject*)nzvals);
+    int_type = PyArray_TYPE((PyArrayObject*)(colind));
     if (!CHECK_SLU_TYPE(type)) {
 	PyErr_SetString(PyExc_TypeError,
 			"nzvals is not of a type supported by SuperLU");
@@ -135,7 +139,7 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     if (csc) {
 	if (NCFormat_from_spMatrix((SuperMatrix*)&A, N, N, nnz,
                                    (PyArrayObject *)nzvals, (PyArrayObject *)colind,
-                                   (PyArrayObject *)rowptr, type)) {
+                                   (PyArrayObject *)rowptr, type, int_type)) {
 	    Py_DECREF(Py_X);
 	    return NULL;
 	}
@@ -143,7 +147,7 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     else {
 	if (NRFormat_from_spMatrix((SuperMatrix*)&A, N, N, nnz, (PyArrayObject *)nzvals,
                                    (PyArrayObject *)colind, (PyArrayObject *)rowptr,
-				   type)) {
+				   type, int_type)) {
 	    Py_DECREF(Py_X);
 	    return NULL;
 	}
@@ -171,9 +175,9 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
 	StatInit((SuperLUStat_t*)&stat);
 
 	/* Compute direct inverse of sparse Matrix */
-	gssv(type, (superlu_options_t*)&options, (SuperMatrix*)&A, (int*)perm_c, (int*)perm_r,
+	gssv(type, (superlu_options_t*)&options, (SuperMatrix*)&A, (int_t*)perm_c, (int_t*)perm_r,
              (SuperMatrix*)&L, (SuperMatrix*)&U, (SuperMatrix*)&B, (SuperLUStat_t*)&stat,
-             (int*)&info);
+             (int_t*)&info);
         SLU_END_THREADS;
     }
 
@@ -203,14 +207,14 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
 			  PyObject * keywds)
 {
     /* default value for SuperLU parameters */
-    int N, nnz;
+    int N_capi, nnz_capi;
     PyArrayObject *rowind, *colptr, *nzvals;
     SuperMatrix A = { 0 };
     PyObject *result;
     PyObject *py_csc_construct_func = NULL;
     PyObject *option_dict = NULL;
-    int type;
-    int ilu = 0;
+    int type, int_type;
+    int ilu_capi = 0;
 
     static char *kwlist[] = { "N", "nnz", "nzvals", "colind", "rowptr",
         "csc_construct_func", "options", "ilu",
@@ -219,16 +223,19 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
 
     int res =
 	PyArg_ParseTupleAndKeywords(args, keywds, "iiO!O!O!O|Oi", kwlist,
-				    &N, &nnz,
+				    &N_capi, &nnz_capi,
 				    &PyArray_Type, &nzvals,
 				    &PyArray_Type, &rowind,
 				    &PyArray_Type, &colptr,
                                     &py_csc_construct_func,
 				    &option_dict,
-				    &ilu);
+				    &ilu_capi);
 
     if (!res)
 	return NULL;
+    int_t N = (int_t)N_capi;
+    int_t nnz = (int_t)nnz_capi;
+    int_t ilu = (int_t)ilu_capi;
 
     if (!_CHECK_INTEGER(colptr) || !_CHECK_INTEGER(rowind)) {
 	PyErr_SetString(PyExc_TypeError,
@@ -237,6 +244,7 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
     }
 
     type = PyArray_TYPE((PyArrayObject*)nzvals);
+    int_type = PyArray_TYPE((PyArrayObject*)(rowind));
     if (!CHECK_SLU_TYPE(type)) {
 	PyErr_SetString(PyExc_TypeError,
 			"nzvals is not of a type supported by SuperLU");
@@ -244,7 +252,7 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
     }
 
     if (NCFormat_from_spMatrix(&A, N, N, nnz, nzvals, rowind, colptr,
-			       type)) {
+			       type, int_type)) {
 	goto fail;
     }
 

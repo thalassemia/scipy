@@ -326,14 +326,14 @@ int DenseSuper_from_Numeric(SuperMatrix *X, PyObject *PyX)
 
 int NRFormat_from_spMatrix(SuperMatrix * A, int m, int n, int nnz,
                            PyArrayObject * nzvals, PyArrayObject * colind,
-                           PyArrayObject * rowptr, int typenum)
+                           PyArrayObject * rowptr, int typenum, int int_type)
 {
     volatile int ok = 0;
     volatile jmp_buf *jmpbuf_ptr;
 
     ok = (PyArray_EquivTypenums(PyArray_TYPE(nzvals), typenum) &&
-          PyArray_EquivTypenums(PyArray_TYPE(colind), NPY_INT) &&
-          PyArray_EquivTypenums(PyArray_TYPE(rowptr), NPY_INT) &&
+          PyArray_EquivTypenums(PyArray_TYPE(colind), int_type) &&
+          PyArray_EquivTypenums(PyArray_TYPE(rowptr), int_type) &&
           PyArray_NDIM(nzvals) == 1 &&
           PyArray_NDIM(colind) == 1 &&
           PyArray_NDIM(rowptr) == 1 &&
@@ -373,14 +373,14 @@ int NRFormat_from_spMatrix(SuperMatrix * A, int m, int n, int nnz,
 
 int NCFormat_from_spMatrix(SuperMatrix * A, int m, int n, int nnz,
                            PyArrayObject * nzvals, PyArrayObject * rowind,
-                           PyArrayObject * colptr, int typenum)
+                           PyArrayObject * colptr, int typenum, int int_type)
 {
     volatile int ok = 0;
     volatile jmp_buf *jmpbuf_ptr;
 
     ok = (PyArray_EquivTypenums(PyArray_TYPE(nzvals), typenum) &&
-          PyArray_EquivTypenums(PyArray_TYPE(rowind), NPY_INT) &&
-          PyArray_EquivTypenums(PyArray_TYPE(colptr), NPY_INT) &&
+          PyArray_EquivTypenums(PyArray_TYPE(rowind), int_type) &&
+          PyArray_EquivTypenums(PyArray_TYPE(colptr), int_type) &&
           PyArray_NDIM(nzvals) == 1 &&
           PyArray_NDIM(rowind) == 1 &&
           PyArray_NDIM(colptr) == 1 &&

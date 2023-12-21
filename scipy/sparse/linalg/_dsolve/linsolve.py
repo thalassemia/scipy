@@ -6,6 +6,7 @@ from scipy.sparse import (issparse,
                           SparseEfficiencyWarning, csc_matrix, csr_matrix)
 from scipy.sparse._sputils import is_pydata_spmatrix
 from scipy.linalg import LinAlgError
+from scipy.io import _test_fortran
 import copy
 
 from . import _superlu
@@ -124,8 +125,9 @@ def _get_umf_family(A):
     return family, A_new
 
 def _safe_downcast_indices(A):
+    int_type = _test_fortran.types.intvar.dtype
     # check for safe downcasting
-    max_value = np.iinfo(np.intc).max
+    max_value = np.iinfo(int_type).max
 
     if A.indptr[-1] > max_value:  # indptr[-1] is max b/c indptr always sorted
         raise ValueError("indptr values too large for SuperLU")
@@ -134,8 +136,8 @@ def _safe_downcast_indices(A):
         if np.any(A.indices > max_value):
             raise ValueError("indices values too large for SuperLU")
 
-    indices = A.indices.astype(np.intc, copy=False)
-    indptr = A.indptr.astype(np.intc, copy=False)
+    indices = A.indices.astype(int_type, copy=False)
+    indptr = A.indptr.astype(int_type, copy=False)
     return indices, indptr
 
 def spsolve(A, b, permc_spec=None, use_umfpack=True):
@@ -284,8 +286,7 @@ def spsolve(A, b, permc_spec=None, use_umfpack=True):
             else:
                 flag = 0  # CSR format
 
-            indices = A.indices.astype(np.intc, copy=False)
-            indptr = A.indptr.astype(np.intc, copy=False)
+            indices, indptr = _safe_downcast_indices(A)
             options = dict(ColPerm=permc_spec)
             x, info = _superlu.gssv(N, A.nnz, A.data, indices, indptr,
                                     b, flag, options=options)

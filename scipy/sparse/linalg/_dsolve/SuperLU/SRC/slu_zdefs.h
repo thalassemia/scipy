@@ -83,8 +83,6 @@ at the top-level directory.
 #include <fortran.h>
 #endif
 
-/* Define my integer type int_t */
-typedef int int_t; /* default */
 
 #include <math.h>
 #include <limits.h>
