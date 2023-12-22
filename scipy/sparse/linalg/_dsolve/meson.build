@@ -215,7 +215,8 @@ superlu_lib = static_library('superlu_lib',
 superlu_main_rep_int = custom_target('superlu_main_rep_int',
   output: ['_superlu_utils.c', '_superluobject.c', '_superluobject.h'],
   input: ['_superlu_utils.c', '_superluobject.c', '_superluobject.h'],
-  command: [py3, replace_int_type_file, '-f', '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, replace_int_type_file, '-f', '@INPUT@', '-o', '@OUTDIR@'],
+  depends: [superlu_src_rep_int],
 )
 superlu_mod_src = fs.copyfile('_superlumodule.c')
 _superlu = py3.extension_module('_superlu',
