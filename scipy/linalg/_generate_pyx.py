@@ -116,6 +116,8 @@ def pyx_decl_sub(name, args, header_name, suffix):
         fort_name += '_'
         if '$NEWLAPACK' in suffix:
             fort_name += '_'
+        else:
+            fort_name += suffix
     else:
         fort_macro = 'BLAS_FUNC'
     return pyx_sub_template.format(name=name, upname=name.upper(),
@@ -551,21 +553,6 @@ def generate_lapack_pxd(all_sigs):
         ) + '\n'.join(pxd_decl(*sig) for sig in all_sigs)
 
 
-fortran_template = """      subroutine {name}wrp(
-     +    ret,
-     +    {argnames}
-     +    )
-        external {wrapper}
-        {ret_type} {wrapper}
-        {ret_type} ret
-        {argdecls}
-        ret = {wrapper}(
-     +    {argnames}
-     +    )
-      end
-"""
-
-
 def make_c_args(args):
     types, names = arg_names_and_types(args)
     types = [c_types[arg] for arg in types]
@@ -581,9 +568,9 @@ void w{name}({return_type} *ret, {args}){{
 
 
 complex_dot_template = """
-void BLAS_FUNC(cblas_{name}_sub)({f_args}, {return_type} *ret);
+void CBLAS_FUNC(cblas_{name}_sub)({f_args}, {return_type} *ret);
 void w{name}({return_type} *ret, {args}){{
-    BLAS_FUNC(cblas_{name}_sub)({c_args}, ret);
+    CBLAS_FUNC(cblas_{name}_sub)({c_args}, ret);
 }}
 """
 

@@ -164,43 +164,34 @@ if host_machine.system() == 'darwin'
 endif
 
 blas_symbol_suffix = ''
-fblas_symbol_suffix = blas_name
 _fortran_64_bit_int = []
 blas_int_type = 'int'
 f2py_64_bit_int_flag = []
+_args_blas = []
+if blas_name == 'accelerate' and macOS13_3_or_later
+  blas_symbol_suffix = '$NEWLAPACK'
+  _args_blas += ['-DACCELERATE_NEW_LAPACK']
+endif
+if use_ilp64
+  _fortran_64_bit_int += ['-fdefault-integer-8']
+  blas_int_type = 'npy_int64'
+  f2py_64_bit_int_flag += '-i'
+  _args_blas += ['-DHAVE_BLAS_ILP64']
+  if blas_name == 'openblas'
+    blas_symbol_suffix = '64_'
+    _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME', '-DBLAS_SYMBOL_SUFFIX=64_']
+  elif blas_name == 'mkl'
+    blas_symbol_suffix = '64_'
+    _args_blas += ['-DBLAS_SYMBOL_SUFFIX=_64']
+  elif blas_name == 'accelerate'
+    blas_symbol_suffix = '$NEWLAPACK$ILP64'
+  endif
+endif
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
 # that too to make the fallback detection with CMake work
-_args_blas = []
-if blas_name == 'openblas'
-  if use_ilp64
-    blas_symbol_suffix = '64_'
-    _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME', '-DHAVE_BLAS_ILP64']
-    _fortran_64_bit_int += ['-fdefault-integer-8']
-    blas_int_type = 'npy_int64'
-    f2py_64_bit_int_flag += '-i'
-  endif
-  blas = dependency(['openblas', 'OpenBLAS'], compile_args: _args_blas)
-elif blas_name == 'accelerate'
-  if macOS13_3_or_later
-    blas_symbol_suffix = '$NEWLAPACK'
-    if use_ilp64
-      _args_blas += ['-DHAVE_BLAS_ILP64']
-      blas_symbol_suffix = '$NEWLAPACK$ILP64'
-      _fortran_64_bit_int += ['-fdefault-integer-8']
-      blas_int_type = 'npy_int64'
-      f2py_64_bit_int_flag += '-i'
-    endif
-    fblas_symbol_suffix = ''
-    blas = declare_dependency(
-      dependencies: [dependency('Accelerate')],
-      compile_args: ['-DACCELERATE_NEW_LAPACK', _args_blas]
-    )
-  else
-    blas = dependency('Accelerate')
-  endif
-else
-  blas = dependency(blas_name)
-endif
+blas = declare_dependency(
+    dependencies: dependency(blas_name), 
+    compile_args: _args_blas)
 if blas_name == 'blas'
   # Netlib BLAS has a separate `libcblas.so` which we use directly in the g77
   # ABI wrappers, so detect it and error out if we cannot find it.
@@ -212,7 +203,8 @@ else
   cblas = []
 endif
 
-if blas_name == 'accelerate' or lapack_name == 'openblas'
+
+if lapack_name == 'accelerate' or lapack_name == 'openblas'
   # For these libraries we know that they contain LAPACK, and it's desirable to
   # use that - no need to run the full detection twice.
   lapack = blas
