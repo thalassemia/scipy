@@ -11,7 +11,7 @@ c_types = {'int': 'F_INT',
            's': 'float',
            'z': 'npy_complex128',
            'char': 'char',
-           'bint': 'int',
+           'bint': 'F_INT',
            'cselect1': '_cselect1',
            'cselect2': '_cselect2',
            'dselect2': '_dselect2',
@@ -95,8 +95,8 @@ def c_func_decl(name, return_type, args, suffix, g77):
             fort_macro = ''
         elif name == 'lsame':
             fort_name = 'lsamen'
-            def_args = ','.join(['int *n', args])
-            extra_setup = 'int n = 1;'
+            def_args = ','.join(['F_INT *n', args])
+            extra_setup = 'F_INT n = 1;'
             f_args = ','.join(['&n', f_args])
     if g77 and name in ['cdotc', 'cdotu', 'zdotc', 'zdotu']:
         fort_name = f'cblas_{name}_sub'
