@@ -53,9 +53,9 @@ extern PyTypeObject SuperLUGlobalType;
 
 int DenseSuper_from_Numeric(SuperMatrix *, PyObject *);
 int NRFormat_from_spMatrix(SuperMatrix *, int, int, int, PyArrayObject *,
-			   PyArrayObject *, PyArrayObject *, int, int);
+			   PyArrayObject *, PyArrayObject *, int);
 int NCFormat_from_spMatrix(SuperMatrix *, int, int, int, PyArrayObject *,
-			   PyArrayObject *, PyArrayObject *, int, int);
+			   PyArrayObject *, PyArrayObject *, int);
 int LU_to_csc_matrix(SuperMatrix *L, SuperMatrix *U,
                      PyObject **L_csc, PyObject **U_csc,
                      PyObject *py_csc_construct_func);

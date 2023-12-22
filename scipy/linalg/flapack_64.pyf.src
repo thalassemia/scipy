@@ -34,5 +34,3 @@ interface
 end interface
 
 end python module _flapack_64
-
-

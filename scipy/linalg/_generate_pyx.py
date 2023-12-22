@@ -565,53 +565,6 @@ fortran_template = """      subroutine {name}wrp(
       end
 """
 
-dims = {'work': '(*)', 'ab': '(ldab,*)', 'a': '(lda,*)', 'dl': '(*)',
-        'd': '(*)', 'du': '(*)', 'ap': '(*)', 'e': '(*)', 'lld': '(*)'}
-
-xy_specialized_dims = {'x': '', 'y': ''}
-a_specialized_dims = {'a': '(*)'}
-special_cases = defaultdict(dict,
-                            ladiv = xy_specialized_dims,
-                            lanhf = a_specialized_dims,
-                            lansf = a_specialized_dims,
-                            lapy2 = xy_specialized_dims,
-                            lapy3 = xy_specialized_dims)
-
-
-def process_fortran_name(name, funcname):
-    if 'inc' in name:
-        return name
-    special = special_cases[funcname[1:]]
-    if 'x' in name or 'y' in name:
-        suffix = special.get(name, '(n)')
-    else:
-        suffix = special.get(name, '')
-    return name + suffix
-
-
-def called_name(name, suffix):
-    included = ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']
-    if name in included:
-        return "w" + name + suffix
-    return name
-
-
-def fort_subroutine_wrapper(name, ret_type, args, suffix):
-    wrapper = called_name(name, suffix)
-    types, names = arg_names_and_types(args)
-    argnames = ',\n     +    '.join(names)
-
-    names = [process_fortran_name(n, name) for n in names]
-    argdecls = '\n        '.join(f'{fortran_types[t]} {n}'
-                                 for n, t in zip(names, types))
-    return fortran_template.format(name=name, wrapper=wrapper,
-                                   argnames=argnames, argdecls=argdecls,
-                                   ret_type=fortran_types[ret_type])
-
-
-def generate_fortran(func_sigs, suffix):
-    return "\n".join(fort_subroutine_wrapper(sig[0], sig[1], sig[2], suffix) for sig in func_sigs)
-
 
 def make_c_args(args):
     types, names = arg_names_and_types(args)
@@ -785,8 +738,8 @@ c_end = """
 
 
 def generate_c_header(func_sigs, sub_sigs, all_sigs, lib_name, suffix, g77):
-    funcs = "".join(c_func_decl(sig[0], sig[1], sig[2], suffix, g77) for sig in func_sigs)
-    subs = "\n" + "".join(c_sub_decl(sig[0], sig[1], sig[2], suffix) for sig in sub_sigs)
+    funcs = "".join(c_func_decl(*(sig + (suffix, g77))) for sig in func_sigs)
+    subs = "\n" + "".join(c_sub_decl(*(sig + (suffix,))) for sig in sub_sigs)
     if lib_name == 'LAPACK':
         preamble = (c_preamble.format(lib=lib_name) + lapack_decls)
     else:
@@ -888,10 +841,6 @@ def make_all(outdir,
     with open(os.path.join(outdir, blas_name + '.pxd'), 'w') as f:
         f.write(pyxcomment)
         f.write(blas_pxd)
-    blas_fortran = generate_fortran(blas_sigs[0], suffix)
-    with open(os.path.join(outdir, blas_fortran_name), 'w') as f:
-        f.write(fcomment)
-        f.write(blas_fortran)
     blas_c_header = generate_c_header(*(blas_sigs + ('BLAS', suffix, g77)))
     with open(os.path.join(outdir, blas_header_name), 'w') as f:
         f.write(ccomment)
@@ -907,10 +856,6 @@ def make_all(outdir,
     with open(os.path.join(outdir, lapack_name + '.pxd'), 'w') as f:
         f.write(pyxcomment)
         f.write(lapack_pxd)
-    lapack_fortran = generate_fortran(lapack_sigs[0], suffix)
-    with open(os.path.join(outdir, lapack_fortran_name), 'w') as f:
-        f.write(fcomment)
-        f.write(lapack_fortran)
     lapack_c_header = generate_c_header(*(lapack_sigs + ('LAPACK', suffix, g77)))
     with open(os.path.join(outdir, lapack_header_name), 'w') as f:
         f.write(ccomment)

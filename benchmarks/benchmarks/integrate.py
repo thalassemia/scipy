@@ -23,9 +23,6 @@ if exc.error:
 with safe_import():
     from scipy.integrate import solve_bvp
 
-with safe_import():
-    from scipy.integrate import solve_ivp
-
 
 class SolveBVP(Benchmark):
     TOL = 1e-5
@@ -115,24 +112,3 @@ class Quad(Benchmark):
 
     def time_quad_cffi(self):
         quad(self.f_cffi, 0, np.pi)
-
-    def time_quad_cython_weight_cos(self):
-        quad(self.f_cython, 0, np.pi, weight='cos', wvar=10)
-
-    def time_quad_cython_weight_sin(self):
-        quad(self.f_cython, 0, np.pi, weight='sin', wvar=10)
-
-
-def lotkavolterra(t, z, a, b, c, d):
-    x, y = z
-    return [a*x - b*x*y, -c*y + d*x*y]
-
-
-class SolveIVP(Benchmark):
-    params = [
-        ['RK45', 'BDF', 'LSODA'],
-    ]
-
-    def time_solve(self, method):
-        sol = solve_ivp(lotkavolterra, [0, 15], [10, 5], args=(1.5, 1, 3, 1),
-                        method=method)

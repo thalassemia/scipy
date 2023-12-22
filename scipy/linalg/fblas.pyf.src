@@ -24,5 +24,3 @@ python module _fblas
 
     end interface
 end python module _fblas
-
-

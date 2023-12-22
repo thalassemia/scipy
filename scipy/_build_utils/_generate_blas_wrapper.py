@@ -226,19 +226,21 @@ ccomment = ''.join(['/* ' + line.rstrip() + ' */\n'
                     for line in comments]) + '\n'
 
 
-def generate_c_files(func_sigs, sub_sigs, all_sigs, lib_name, suffix, g77, outdir):
+def generate_c_file(func_sigs, sub_sigs, all_sigs, lib_name, suffix, g77, outdir):
     if lib_name == 'LAPACK':
         preamble = (c_preamble.format(lib=lib_name) + lapack_decls)
+        out_name = 'lapack_wrappers.c'
     else:
         preamble = c_preamble.format(lib=lib_name)
+        out_name = 'blas_wrappers.c'
+    funcs_and_subs = [ccomment, preamble, cpp_guard]
     for sig in func_sigs:
-        func = c_func_decl(*(sig+(suffix, g77)))
-        with open(os.path.join(outdir, f'_{sig[0]}.c'), 'w') as func_file:
-            func_file.writelines("".join([ccomment, preamble, cpp_guard, func, c_end]))
+        funcs_and_subs.append(c_func_decl(*(sig+(suffix, g77))))
     for sig in sub_sigs:
-        sub = c_sub_decl(*(sig+(suffix,)))
-        with open(os.path.join(outdir, f'_{sig[0]}.c'), 'w') as sub_file:
-            sub_file.writelines("".join([ccomment, preamble, cpp_guard, sub, c_end]))
+        funcs_and_subs.append(c_sub_decl(*(sig+(suffix,))))
+    funcs_and_subs.append(c_end)
+    with open(os.path.join(outdir, out_name), 'w') as func_file:
+        func_file.writelines("".join(funcs_and_subs))
 
 
 def make_all(outdir,
@@ -249,11 +251,11 @@ def make_all(outdir,
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
     blas_sigs = filter_lines(blas_sigs)
-    generate_c_files(*(blas_sigs + ('BLAS', suffix, g77, outdir)))
+    generate_c_file(*(blas_sigs + ('BLAS', suffix, g77, outdir)))
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
-    generate_c_files(*(lapack_sigs + ('LAPACK', suffix, g77, outdir)))
+    generate_c_file(*(lapack_sigs + ('LAPACK', suffix, g77, outdir)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

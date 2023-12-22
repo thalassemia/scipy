@@ -83,7 +83,7 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     volatile superlu_options_t options = { 0 };
     volatile SuperLUStat_t stat = { 0 };
     volatile PyObject *option_dict = NULL;
-    volatile int type, int_type;
+    volatile int type;
     volatile jmp_buf *jmpbuf_ptr;
     SLU_BEGIN_THREADS_DEF;
 
@@ -110,7 +110,6 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     }
 
     type = PyArray_TYPE((PyArrayObject*)nzvals);
-    int_type = PyArray_TYPE((PyArrayObject*)(colind));
     if (!CHECK_SLU_TYPE(type)) {
 	PyErr_SetString(PyExc_TypeError,
 			"nzvals is not of a type supported by SuperLU");
@@ -139,7 +138,7 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     if (csc) {
 	if (NCFormat_from_spMatrix((SuperMatrix*)&A, N, N, nnz,
                                    (PyArrayObject *)nzvals, (PyArrayObject *)colind,
-                                   (PyArrayObject *)rowptr, type, int_type)) {
+                                   (PyArrayObject *)rowptr, type)) {
 	    Py_DECREF(Py_X);
 	    return NULL;
 	}
@@ -147,7 +146,7 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     else {
 	if (NRFormat_from_spMatrix((SuperMatrix*)&A, N, N, nnz, (PyArrayObject *)nzvals,
                                    (PyArrayObject *)colind, (PyArrayObject *)rowptr,
-				   type, int_type)) {
+				   type)) {
 	    Py_DECREF(Py_X);
 	    return NULL;
 	}
@@ -213,7 +212,7 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
     PyObject *result;
     PyObject *py_csc_construct_func = NULL;
     PyObject *option_dict = NULL;
-    int type, int_type;
+    int type;
     int ilu_capi = 0;
 
     static char *kwlist[] = { "N", "nnz", "nzvals", "colind", "rowptr",
@@ -244,7 +243,6 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
     }
 
     type = PyArray_TYPE((PyArrayObject*)nzvals);
-    int_type = PyArray_TYPE((PyArrayObject*)(rowind));
     if (!CHECK_SLU_TYPE(type)) {
 	PyErr_SetString(PyExc_TypeError,
 			"nzvals is not of a type supported by SuperLU");
@@ -252,7 +250,7 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
     }
 
     if (NCFormat_from_spMatrix(&A, N, N, nnz, nzvals, rowind, colptr,
-			       type, int_type)) {
+			       type)) {
 	goto fail;
     }
 

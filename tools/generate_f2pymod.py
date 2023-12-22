@@ -61,7 +61,6 @@ process_file(filename)
 routine_start_re = re.compile(r'(\n|\A)((     (\$|\*))|)\s*(subroutine|function)\b', re.I)
 routine_end_re = re.compile(r'\n\s*end\s*(subroutine|function)\b.*(\n|\Z)', re.I)
 function_start_re = re.compile(r'\n     (\$|\*)\s*function\b', re.I)
-routine_start_and_name_re = re.compile(r'((\n|\A)((     (\$|\*))|)\s*(subroutine|function)\b\s)([^\)]*)\(([^\)]*|\n)\)((\s*result\s*\([^\)\(]*\))|([^\)\(]*)|)\n', re.I)
 
 def parse_structure(astr):
     """ Return a list of tuples for each function or subroutine each
@@ -160,7 +159,6 @@ def expand_sub(substr, names):
     numsubs = None
     base_rule = None
     rules = {}
-
     for r in template_re.findall(substr):
         if r not in rules:
             thelist = lnames.get(r, names.get(r, None))
@@ -287,12 +285,10 @@ def main():
     with open(fname_pyf, 'w') as f:
         f.writelines(code)
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    f2cmap_file = os.path.join(dir_path, '.f2py_f2cmap')
     # Now invoke f2py to generate the C API module file
     if args.infile.endswith(('.pyf.src', '.pyf')):
         p = subprocess.Popen([sys.executable, '-m', 'numpy.f2py', fname_pyf,
-                            '--build-dir', outdir_abs, '--f2cmap', f2cmap_file], #'--quiet'],
+                            '--build-dir', outdir_abs], #'--quiet'],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             cwd=os.getcwd())
         out, err = p.communicate()

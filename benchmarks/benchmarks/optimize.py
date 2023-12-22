@@ -314,8 +314,10 @@ class BenchSmoothUnbounded(Benchmark):
         ['rosenbrock_slow', 'rosenbrock_nograd', 'rosenbrock', 'rosenbrock_tight',
          'simple_quadratic', 'asymmetric_quadratic',
          'sin_1d', 'booth', 'beale', 'LJ'],
-        [
-         'L-BFGS-B',],
+        ["COBYLA", 'Powell', 'nelder-mead',
+         'L-BFGS-B', 'BFGS', 'CG', 'TNC', 'SLSQP',
+         "Newton-CG", 'dogleg', 'trust-ncg', 'trust-exact',
+         'trust-krylov', 'trust-constr'],
         ["mean_nfev", "mean_time"]
     ]
     param_names = ["test function", "solver", "result type"]
@@ -578,8 +580,9 @@ class BenchDFO(Benchmark):
 
     params = [
         list(range(53)),  # adjust which problems to solve
-        ["L-BFGS-B"],  # note: methods must also be listed in bench_run
-        ["mean_time"],  # defined in average_results
+        ["COBYLA", "SLSQP", "Powell", "nelder-mead", "L-BFGS-B", "BFGS",
+         "trust-constr"],  # note: methods must also be listed in bench_run
+        ["mean_nfev", "min_obj"],  # defined in average_results
     ]
     param_names = ["DFO benchmark problem number", "solver", "result type"]
 
