@@ -47,7 +47,7 @@ cimport cython
 cimport libc.stdlib
 cimport libc.limits
 cimport libc.float
-from libc.math cimport sqrt, fabs, hypot, M_SQRT1_2
+from libc.math cimport sqrt, hypot, M_SQRT1_2
 from libc.string cimport memset
 
 cimport numpy as cnp
@@ -732,7 +732,7 @@ cdef {{ i_type }} qr_block_col_insert({{ i_type }} m, {{ i_type }} n, blas_t* q,
         tau = &c
         info = geqrf(m-n+p, p, index2(r, rs, n-p, k), m, tau, &c, -1)
         if info < 0:
-            return libc.stdlib.abs(info)
+            return libc.stdlib.{{ abs }}(info)
         info = ormqr(side, trans, m, m-(n-p), p, index2(r, rs, n-p, k), m,
                      tau, index2(q, qs, 0, n-p), m, &s, -1)
         if info < 0:
@@ -750,7 +750,7 @@ cdef {{ i_type }} qr_block_col_insert({{ i_type }} m, {{ i_type }} n, blas_t* q,
         # qr
         info = geqrf(m-n+p, p, index2(r, rs, n-p, k), m, tau, work, lwork)
         if info < 0:
-            return libc.stdlib.abs(info)
+            return libc.stdlib.{{ abs }}(info)
 
         # apply the Q from this small qr to the last (m-(n-p)) columns of q.
         info = ormqr(side, trans, m, m-(n-p), p, index2(r, rs, n-p, k), m,
@@ -910,7 +910,7 @@ cdef {{ i_type }} qr_rank_p_update({{ i_type }} m, {{ i_type }} n, {{ i_type }} 
         tau = &c
         info = geqrf(m-n, p, index2(u, us, n, 0), m, tau, &c, -1)
         if info < 0:
-            return libc.stdlib.abs(info)
+            return libc.stdlib.{{ abs }}(info)
         info = ormqr(sideR, trans, m, m-n, p, index2(u, us, n, 0), m, tau,
                 index2(q, qs, 0, n), m, &s, -1)
         if info < 0:
@@ -929,7 +929,7 @@ cdef {{ i_type }} qr_rank_p_update({{ i_type }} m, {{ i_type }} n, {{ i_type }} 
         info = geqrf(m-n, p, index2(u, us, n, 0), m, tau, work, lwork)
         if info < 0:
             libc.stdlib.free(work)
-            return libc.stdlib.abs(info)
+            return libc.stdlib.{{ abs }}(info)
 
         # apply the Q from this small qr to the last (m-n) columns of q.
         info = ormqr(sideR, trans, m, m-n, p, index2(u, us, n, 0), m, tau,

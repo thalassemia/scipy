@@ -10,6 +10,7 @@ import re
 import subprocess
 import argparse
 
+import numpy as np
 
 # START OF CODE VENDORED FROM `numpy.distutils.from_template`
 #############################################################
@@ -251,6 +252,26 @@ _special_names = find_repl_patterns('''
 ###########################################################
 
 
+def get_f2py_int64_options(outdir):
+    if np.dtype('i') == np.dtype(np.int64):
+        int64_name = 'int'
+    elif np.dtype('l') == np.dtype(np.int64):
+        int64_name = 'long'
+    elif np.dtype('q') == np.dtype(np.int64):
+        int64_name = 'long_long'
+    else:
+        raise RuntimeError("No 64-bit integer type available in f2py!")
+
+    f2cmap_fn = os.path.join(outdir, 'int64.f2cmap')
+    text = "{{'integer': {{'': '{}'}}, 'logical': {{'': '{}'}}}}\n".format(
+        int64_name, int64_name)
+
+    with open(f2cmap_fn, 'w') as f:
+        f.writelines(text)
+
+    return ['--f2cmap', f2cmap_fn], int64_name
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("infile", type=str,
@@ -278,17 +299,18 @@ def main():
         code = ''.join(code)
         fname_pyf = os.path.abspath(os.path.join(args.outdir, os.path.split(args.infile)[1]))
     if args.int64:
+        f2c_map, int64_name = get_f2py_int64_options(args.outdir)
         if args.infile.endswith(('.pyf.src', '.pyf')):
-            code = code.replace("integer", "integer(kind=8)").replace("abs(", "labs(").replace("logical", "integer(kind=8)")
-        else:
-            code = code.replace("integer", "integer(kind=8)").replace("logical", "integer(kind=8)")
+            code = code.replace("abs(", "labs(").replace("int*", f"{int64_name}*")
+    else:
+        f2c_map = []
     with open(fname_pyf, 'w') as f:
         f.writelines(code)
 
     # Now invoke f2py to generate the C API module file
     if args.infile.endswith(('.pyf.src', '.pyf')):
         p = subprocess.Popen([sys.executable, '-m', 'numpy.f2py', fname_pyf,
-                            '--build-dir', outdir_abs], #'--quiet'],
+                            '--build-dir', outdir_abs] + f2c_map, #'--quiet'],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             cwd=os.getcwd())
         out, err = p.communicate()

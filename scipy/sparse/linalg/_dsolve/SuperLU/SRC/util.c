@@ -82,15 +82,15 @@ void ilu_set_default_options(superlu_options_t *options)
 void print_options(superlu_options_t *options)
 {
     printf(".. options:\n");
-    printf("\tFact\t %8d\n", options->Fact);
-    printf("\tEquil\t %8d\n", options->Equil);
-    printf("\tColPerm\t %8d\n", options->ColPerm);
+    printf("\tFact\t %8d\n", ( int )options->Fact);
+    printf("\tEquil\t %8d\n", ( int )options->Equil);
+    printf("\tColPerm\t %8d\n", ( int )options->ColPerm);
     printf("\tDiagPivotThresh %8.4f\n", options->DiagPivotThresh);
-    printf("\tTrans\t %8d\n", options->Trans);
-    printf("\tIterRefine\t%4d\n", options->IterRefine);
-    printf("\tSymmetricMode\t%4d\n", options->SymmetricMode);
-    printf("\tPivotGrowth\t%4d\n", options->PivotGrowth);
-    printf("\tConditionNumber\t%4d\n", options->ConditionNumber);
+    printf("\tTrans\t %8d\n", ( int )options->Trans);
+    printf("\tIterRefine\t%4d\n", ( int )options->IterRefine);
+    printf("\tSymmetricMode\t%4d\n", ( int )options->SymmetricMode);
+    printf("\tPivotGrowth\t%4d\n", ( int )options->PivotGrowth);
+    printf("\tConditionNumber\t%4d\n", ( int )options->ConditionNumber);
     printf("..\n");
 }
 
@@ -102,8 +102,8 @@ void print_ilu_options(superlu_options_t *options)
     printf("\tDiagPivotThresh\t%6.2e\n", options->DiagPivotThresh);
     printf("\ttau\t%6.2e\n", options->ILU_DropTol);
     printf("\tgamma\t%6.2f\n", options->ILU_FillFactor);
-    printf("\tDropRule\t%0x\n", options->ILU_DropRule);
-    printf("\tMILU\t%d\n", options->ILU_MILU);
+    printf("\tDropRule\t%0d\n", options->ILU_DropRule);
+    printf("\tMILU\t%d\n", (int)options->ILU_MILU);
     printf("\tMILU_ALPHA\t%6.2e\n", MILU_ALPHA);
     printf("\tDiagFillTol\t%6.2e\n", options->ILU_FillTol);
     printf("..\n");

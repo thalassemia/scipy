@@ -274,10 +274,15 @@ py3.extension_module('_decomp_lu_cython',
   subdir: 'scipy/linalg'
 )
 
+if use_ilp64
+abs_func = 'labs'
+else
+abs_func = 'abs'
+endif
 _decomp_update_pyx = custom_target('_decomp_update',
   output: '_decomp_update.pyx',
   input: '_decomp_update.pyx.in',
-  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type]
+  command: [py3, tempita, '-o', '@OUTDIR@', '@INPUT@', 'i_type=' + blas_int_type, 'abs=' + abs_func]
 )
 
 py3.extension_module('_decomp_update',

@@ -206,7 +206,7 @@ zPrint_CompCol_Matrix(char *what, SuperMatrix *A)
     double       *dp;
     
     printf("\nCompCol matrix %s:\n", what);
-    printf("Stype %d, Dtype %d, Mtype %d\n", A->Stype,A->Dtype,A->Mtype);
+    printf("Stype %u, Dtype %u, Mtype %u\n", A->Stype,A->Dtype,A->Mtype);
     n = A->ncol;
     Astore = (NCformat *) A->Store;
     dp = (double *) Astore->nzval;
@@ -230,7 +230,7 @@ zPrint_SuperNode_Matrix(char *what, SuperMatrix *A)
     int *col_to_sup, *sup_to_col, *rowind, *rowind_colptr;
     
     printf("\nSuperNode matrix %s:\n", what);
-    printf("Stype %d, Dtype %d, Mtype %d\n", A->Stype,A->Dtype,A->Mtype);
+    printf("Stype %u, Dtype %u, Mtype %u\n", A->Stype,A->Dtype,A->Mtype);
     n = A->ncol;
     Astore = (SCformat *) A->Store;
     dp = (double *) Astore->nzval;
@@ -279,7 +279,7 @@ zPrint_Dense_Matrix(char *what, SuperMatrix *A)
     double       *dp;
     
     printf("\nDense matrix %s:\n", what);
-    printf("Stype %d, Dtype %d, Mtype %d\n", A->Stype,A->Dtype,A->Mtype);
+    printf("Stype %u, Dtype %u, Mtype %u\n", A->Stype,A->Dtype,A->Mtype);
     dp = (double *) Astore->nzval;
     printf("nrow %d, ncol %d, lda %d\n", A->nrow,A->ncol,lda);
     printf("\nnzval: ");

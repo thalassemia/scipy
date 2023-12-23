@@ -149,7 +149,7 @@ static PyObject *SuperLU_getter(PyObject *selfp, void *data)
     else if (strcmp(name, "perm_r") == 0) {
         PyObject *perm_r;
         perm_r = PyArray_SimpleNewFromData(
-            1, (npy_intp *) (&self->n), NPY_INT_TYPE,
+            1, (npy_intp *) (&self->n), NPY_INT,
             (void *) self->perm_r);
         if (perm_r == NULL) {
             return NULL;
@@ -164,7 +164,7 @@ static PyObject *SuperLU_getter(PyObject *selfp, void *data)
         PyObject *perm_c;
 
         perm_c = PyArray_SimpleNewFromData(
-            1, (npy_intp *) (&self->n), NPY_INT_TYPE,
+            1, (npy_intp *) (&self->n), NPY_INT,
             (void *) self->perm_c);
         if (perm_c == NULL) {
             return NULL;
@@ -332,8 +332,8 @@ int NRFormat_from_spMatrix(SuperMatrix * A, int m, int n, int nnz,
     volatile jmp_buf *jmpbuf_ptr;
 
     ok = (PyArray_EquivTypenums(PyArray_TYPE(nzvals), typenum) &&
-          PyArray_EquivTypenums(PyArray_TYPE(colind), NPY_INT_TYPE) &&
-          PyArray_EquivTypenums(PyArray_TYPE(rowptr), NPY_INT_TYPE) &&
+          PyArray_EquivTypenums(PyArray_TYPE(colind), NPY_INT) &&
+          PyArray_EquivTypenums(PyArray_TYPE(rowptr), NPY_INT) &&
           PyArray_NDIM(nzvals) == 1 &&
           PyArray_NDIM(colind) == 1 &&
           PyArray_NDIM(rowptr) == 1 &&
@@ -379,8 +379,8 @@ int NCFormat_from_spMatrix(SuperMatrix * A, int m, int n, int nnz,
     volatile jmp_buf *jmpbuf_ptr;
 
     ok = (PyArray_EquivTypenums(PyArray_TYPE(nzvals), typenum) &&
-          PyArray_EquivTypenums(PyArray_TYPE(rowind), NPY_INT_TYPE) &&
-          PyArray_EquivTypenums(PyArray_TYPE(colptr), NPY_INT_TYPE) &&
+          PyArray_EquivTypenums(PyArray_TYPE(rowind), NPY_INT) &&
+          PyArray_EquivTypenums(PyArray_TYPE(colptr), NPY_INT) &&
           PyArray_NDIM(nzvals) == 1 &&
           PyArray_NDIM(rowind) == 1 &&
           PyArray_NDIM(colptr) == 1 &&
@@ -466,12 +466,12 @@ int LU_to_csc_matrix(SuperMatrix *L, SuperMatrix *U,
             if (name == NULL) goto fail;                \
         } while (0)
 
-    CREATE_1D_ARRAY(L_indices, NPY_INT_TYPE, Lstore->nnz);
-    CREATE_1D_ARRAY(L_indptr, NPY_INT_TYPE, L->ncol + 1);
+    CREATE_1D_ARRAY(L_indices, NPY_INT, Lstore->nnz);
+    CREATE_1D_ARRAY(L_indptr, NPY_INT, L->ncol + 1);
     CREATE_1D_ARRAY(L_data, type, Lstore->nnz);
 
-    CREATE_1D_ARRAY(U_indices, NPY_INT_TYPE, Ustore->nnz);
-    CREATE_1D_ARRAY(U_indptr, NPY_INT_TYPE, U->ncol + 1);
+    CREATE_1D_ARRAY(U_indices, NPY_INT, Ustore->nnz);
+    CREATE_1D_ARRAY(U_indptr, NPY_INT, U->ncol + 1);
     CREATE_1D_ARRAY(U_data, type, Ustore->nnz);
 
 #undef CREATE_1D_ARRAY

@@ -75,9 +75,9 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
     volatile PyArrayObject *Py_X = NULL;
     volatile PyArrayObject *nzvals = NULL;
     volatile PyArrayObject *colind = NULL, *rowptr = NULL;
-    volatile int N_capi, nnz_capi;
+    volatile int32_t N_capi, nnz_capi;
     volatile int info;
-    volatile int csc_capi = 0;
+    volatile int32_t csc_capi = 0;
     volatile int *perm_r = NULL, *perm_c = NULL;
     volatile SuperMatrix A = { 0 }, B = { 0 }, L = { 0 }, U = { 0 };
     volatile superlu_options_t options = { 0 };
@@ -99,9 +99,9 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
 				     &rowptr, &Py_B, &csc_capi, &option_dict)) {
 	return NULL;
     }
-    volatile int_t N = (int_t)N_capi;
-    volatile int_t nnz = (int_t)nnz_capi;
-    volatile int_t csc = (int_t)csc_capi;
+    volatile int N = (int)N_capi;
+    volatile int nnz = (int)nnz_capi;
+    volatile int csc = (int)csc_capi;
 
     if (!_CHECK_INTEGER(colind) || !_CHECK_INTEGER(rowptr)) {
 	PyErr_SetString(PyExc_TypeError,
@@ -174,9 +174,9 @@ static PyObject *Py_gssv(PyObject * self, PyObject * args,
 	StatInit((SuperLUStat_t*)&stat);
 
 	/* Compute direct inverse of sparse Matrix */
-	gssv(type, (superlu_options_t*)&options, (SuperMatrix*)&A, (int_t*)perm_c, (int_t*)perm_r,
+	gssv(type, (superlu_options_t*)&options, (SuperMatrix*)&A, (int*)perm_c, (int*)perm_r,
              (SuperMatrix*)&L, (SuperMatrix*)&U, (SuperMatrix*)&B, (SuperLUStat_t*)&stat,
-             (int_t*)&info);
+             (int*)&info);
         SLU_END_THREADS;
     }
 
@@ -206,21 +206,21 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
 			  PyObject * keywds)
 {
     /* default value for SuperLU parameters */
-    int N_capi, nnz_capi;
+    int32_t N_capi, nnz_capi;
     PyArrayObject *rowind, *colptr, *nzvals;
     SuperMatrix A = { 0 };
     PyObject *result;
     PyObject *py_csc_construct_func = NULL;
     PyObject *option_dict = NULL;
     int type;
-    int ilu_capi = 0;
+    int32_t ilu_capi = 0;
 
     static char *kwlist[] = { "N", "nnz", "nzvals", "colind", "rowptr",
         "csc_construct_func", "options", "ilu",
 	NULL
     };
 
-    int res =
+    int32_t res =
 	PyArg_ParseTupleAndKeywords(args, keywds, "iiO!O!O!O|Oi", kwlist,
 				    &N_capi, &nnz_capi,
 				    &PyArray_Type, &nzvals,
@@ -232,9 +232,9 @@ static PyObject *Py_gstrf(PyObject * self, PyObject * args,
 
     if (!res)
 	return NULL;
-    int_t N = (int_t)N_capi;
-    int_t nnz = (int_t)nnz_capi;
-    int_t ilu = (int_t)ilu_capi;
+    int N = (int)N_capi;
+    int nnz = (int)nnz_capi;
+    int ilu = (int)ilu_capi;
 
     if (!_CHECK_INTEGER(colptr) || !_CHECK_INTEGER(rowind)) {
 	PyErr_SetString(PyExc_TypeError,

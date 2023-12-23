@@ -203,7 +203,7 @@ endforeach
 superlu_src_rep_int = custom_target('superlu_src_rep_int',
   output: superlu_src_out,
   input: superlu_src,
-  command: [py3, replace_int_type_file, '-f', '@INPUT@', '-o', '@OUTDIR@']
+  command: [py3, replace_int_type_file, '-f', '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
 )
 superlu_lib = static_library('superlu_lib',
   superlu_src_rep_int,
@@ -213,14 +213,13 @@ superlu_lib = static_library('superlu_lib',
 )
 
 superlu_main_rep_int = custom_target('superlu_main_rep_int',
-  output: ['_superlu_utils.c', '_superluobject.c', '_superluobject.h'],
-  input: ['_superlu_utils.c', '_superluobject.c', '_superluobject.h'],
-  command: [py3, replace_int_type_file, '-f', '@INPUT@', '-o', '@OUTDIR@'],
+  output: ['_superlumodule.c', '_superlu_utils.c', '_superluobject.c', '_superluobject.h'],
+  input: ['_superlumodule.c', '_superlu_utils.c', '_superluobject.c', '_superluobject.h'],
+  command: [py3, replace_int_type_file, '-f', '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag],
   depends: [superlu_src_rep_int],
 )
-superlu_mod_src = fs.copyfile('_superlumodule.c')
 _superlu = py3.extension_module('_superlu',
-  [superlu_mod_src, superlu_main_rep_int],
+  [superlu_main_rep_int],
   c_args: numpy_nodepr_api,
   link_with: [superlu_lib, blas_lapack_wrapper_lib],
   include_directories: ['SuperLU/SRC', '../../../linalg/'],

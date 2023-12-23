@@ -3001,6 +3001,7 @@ PRIVATE void print_report
 {
 
     int i1, i2, i3 ;
+	int zero = 0;
 
     if (!stats)
     {
@@ -3101,7 +3102,7 @@ PRIVATE void print_report
 
 	    PRINTF
 	    ("Row index (row %d) out of bounds (%d to %d) in column %d.\n",
-	    INDEX (i2), INDEX (0), INDEX (i3-1), INDEX (i1)) ;
+	    INDEX (i2), INDEX (zero), INDEX (i3-1), INDEX (i1)) ;
 	    break ;
 
 	case COLAMD_ERROR_out_of_memory:

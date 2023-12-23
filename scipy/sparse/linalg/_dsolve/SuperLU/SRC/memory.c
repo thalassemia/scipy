@@ -62,7 +62,7 @@ void superlu_free(void *addr)
 	ABORT("superlu_free: tried to free NULL+DWORD pointer");
 
     { 
-	int_t n = ((size_t *) p)[0];
+	int n = ((size_t *) p)[0];
 	
 	if ( !n )
 	    ABORT("superlu_free: tried to free a freed pointer");

@@ -433,7 +433,7 @@ cLUMemXpand(int jcol,
     void   *new_mem;
 
 #ifdef DEBUG
-    printf("cLUMemXpand(): jcol %d, next %d, maxlen %d, MemType %d\n",
+    printf("cLUMemXpand(): jcol %d, next %d, maxlen %d, MemType %u\n",
 	   jcol, next, *maxlen, mem_type);
 #endif
 
@@ -446,7 +446,7 @@ cLUMemXpand(int jcol,
 	int    nzlmax  = Glu->nzlmax;
 	int    nzumax  = Glu->nzumax;
 	int    nzlumax = Glu->nzlumax;
-    	fprintf(stderr, "Can't expand MemType %d: jcol %d\n", mem_type, jcol);
+    	fprintf(stderr, "Can't expand MemType %u: jcol %d\n", mem_type, jcol);
     	return (cmemory_usage(nzlmax, nzumax, nzlumax, Glu->n) + Glu->n);
     }
 

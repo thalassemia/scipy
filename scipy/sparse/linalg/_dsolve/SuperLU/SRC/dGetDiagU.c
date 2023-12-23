@@ -33,8 +33,8 @@
 
 void dGetDiagU(SuperMatrix *L, double *diagU)
 {
-    int_t i, k, nsupers;
-    int_t fsupc, nsupr, nsupc, luptr;
+    int i, k, nsupers;
+    int fsupc, nsupr, nsupc, luptr;
     double *dblock, *Lval;
     SCformat *Lstore;
 
