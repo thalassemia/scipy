@@ -1,6 +1,6 @@
 generate_blas_wrapper = files('_generate_blas_wrapper.py')
 blas_lapack_wrappers = custom_target('blas_lapack_wrappers',
-    output: ['g77_wrappers.c', 'blas_wrappers.c', 'lapack_wrappers.c'],
+    output: ['blas_wrappers.c', 'lapack_wrappers.c'],
     command: [py3, generate_blas_wrapper, '-o', '@OUTDIR@', '-s', blas_symbol_suffix, '-g', use_g77_abi.to_string()],
     depend_files: [
       '../linalg/cython_blas_signatures.txt',

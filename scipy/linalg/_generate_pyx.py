@@ -665,11 +665,6 @@ c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
 #include "numpy/arrayobject.h"
-#ifdef HAVE_BLAS_ILP64
-#define F_INT npy_int64
-#else
-#define F_INT int
-#endif
 
 #include <numpy/npy_math.h>
 

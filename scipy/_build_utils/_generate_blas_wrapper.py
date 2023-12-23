@@ -21,7 +21,6 @@ c_types = {'int': 'F_INT',
            'zselect1': '_zselect1',
            'zselect2': '_zselect2'}
 
-g77_funcs = ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']
 
 def split_signature(sig):
     name_and_type, args = sig[:-1].split('(')
@@ -34,11 +33,9 @@ def filter_lines(lines):
                       if line and not line.startswith('#')]
     func_sigs = [split_signature(line) for line in lines
                                            if line.split(' ')[0] != 'void']
-    g77_sigs = [sig for sig in func_sigs if sig[0] in g77_funcs]
-    func_sigs = [sig for sig in func_sigs if sig[0] not in g77_funcs]
     sub_sigs = [split_signature(line) for line in lines
                                           if line.split(' ')[0] == 'void']
-    return func_sigs, sub_sigs, g77_sigs
+    return func_sigs, sub_sigs
 
 
 def arg_names_and_types(args):
@@ -152,6 +149,9 @@ void F_FUNC({name}, {upname})({args}){{
 
 
 def c_sub_decl(name, return_type, args, suffix):
+    # No wrapper required if no suffix
+    if suffix == '':
+        return ''
     args, f_args = make_c_args(args)
     fort_macro = 'BLAS_FUNC'
     if '$NEWLAPACK' in suffix:
@@ -165,11 +165,6 @@ c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
 #include "numpy/arrayobject.h"
-#ifdef HAVE_BLAS_ILP64
-#define F_INT npy_int64
-#else
-#define F_INT int
-#endif
 
 #include <numpy/npy_math.h>
 
@@ -233,14 +228,9 @@ def generate_c_file(func_sigs, sub_sigs, lib_name, suffix, g77, outdir):
     if lib_name == 'LAPACK':
         preamble = (c_preamble.format(lib=lib_name) + lapack_decls)
         out_name = 'lapack_wrappers.c'
-    elif lib_name == 'BLAS':
+    else:
         preamble = c_preamble.format(lib=lib_name)
         out_name = 'blas_wrappers.c'
-    elif lib_name == 'g77':
-        preamble = c_preamble.format(lib=lib_name)
-        out_name = f'g77_wrappers.c'
-    else:
-        raise NameError("lib_name must be 'LAPACK', 'BLAS', or 'g77'")
     funcs_and_subs = [ccomment, preamble, cpp_guard]
     for sig in func_sigs:
         funcs_and_subs.append(c_func_decl(*(sig+(suffix, g77))))
@@ -262,13 +252,6 @@ def make_all(outdir,
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
-    g77_sigs = blas_sigs[-1] + lapack_sigs[-1]
-    blas_sigs = blas_sigs[:-1]
-    lapack_sigs = lapack_sigs[:-1]
-    generate_c_file(g77_sigs, (), 'g77', suffix, g77, outdir)
-    if suffix == '':
-        blas_sigs = ((), ())
-        lapack_sigs = ((), ())
     generate_c_file(*(blas_sigs + ('BLAS', suffix, g77, outdir)))
     generate_c_file(*(lapack_sigs + ('LAPACK', suffix, g77, outdir)))
 

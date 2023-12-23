@@ -171,6 +171,9 @@ _args_blas = []
 if blas_name == 'accelerate' and macOS13_3_or_later
   blas_symbol_suffix = '$NEWLAPACK'
   _args_blas += ['-DACCELERATE_NEW_LAPACK']
+  if use_ilp64
+    blas_symbol_suffix = '$NEWLAPACK$ILP64'
+  endif
 endif
 if use_ilp64
   _fortran_64_bit_int += ['-fdefault-integer-8']
@@ -179,12 +182,11 @@ if use_ilp64
   _args_blas += ['-DHAVE_BLAS_ILP64']
   if blas_name == 'openblas'
     blas_symbol_suffix = '64_'
+    blas_name += '64'
     _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME', '-DBLAS_SYMBOL_SUFFIX=64_']
   elif blas_name == 'mkl'
     blas_symbol_suffix = '64_'
     _args_blas += ['-DBLAS_SYMBOL_SUFFIX=_64']
-  elif blas_name == 'accelerate'
-    blas_symbol_suffix = '$NEWLAPACK$ILP64'
   endif
 endif
 # pkg-config uses a lower-case name while CMake uses a capitalized name, so try
