@@ -176,7 +176,11 @@ if blas_name == 'accelerate' and macOS13_3_or_later
   endif
 endif
 if use_ilp64
-  _fortran_64_bit_int += ['-fdefault-integer-8']
+  if ff.get_id() == 'gcc' or ff.get_id() == 'g95'
+    _fortran_64_bit_int += ['-fdefault-integer-8']
+  else
+    _fortran_64_bit_int += ['-i8']
+  endif
   blas_int_type = 'npy_int64'
   f2py_64_bit_int_flag += '-i'
   _args_blas += ['-DHAVE_BLAS_ILP64']

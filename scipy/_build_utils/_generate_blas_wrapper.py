@@ -133,6 +133,8 @@ def c_func_decl(name, return_type, args, suffix, g77):
         return ladiv_template.format(name=name, upname=name.upper(), fort_name=fort_name, 
             f_args=f_args, args=args, float_type=float_type, f=f, 
             return_type=return_type)
+    if suffix == '':
+        return ''
     return c_func_template.format(name=name, upname=name.upper(),
                                   return_type=return_type, args=args,
                                   f_args=f_args, fort_macro=fort_macro,
