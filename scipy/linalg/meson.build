@@ -156,7 +156,7 @@ py3.extension_module('_flinalg',
 interpolative_module = custom_target('interpolative_module',
   output: '_interpolativemodule.c',
   input: 'interpolative.pyf',
-  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@', f2py_64_bit_int_flag]
+  command: [py3, generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
 )
 
 # id_dist contains a copy of FFTPACK, which has type mismatch warnings
@@ -202,10 +202,11 @@ py3.extension_module('_interpolative',
     'src/id_dist/src/idzr_rid.f',
     'src/id_dist/src/idzr_rsvd.f',
     'src/id_dist/src/prini.f',
+    'interpolative_lapack_ilp64.c',
     interpolative_module,
   ],
   c_args: numpy_nodepr_api,
-  fortran_args: [fortran_ignore_warnings, _suppress_all_warnings, _fortran_64_bit_int],
+  fortran_args: [fortran_ignore_warnings, _suppress_all_warnings],
   link_args: version_link_args,
   dependencies: [lapack, fortranobject_dep],
   install: true,

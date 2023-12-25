@@ -89,7 +89,7 @@ c
         ldu = krank
         ldvadj = krank
 c
-        call zgesdd(jobz,krank,n,r(io+1),ldr,s,r(io+krank*n+1),ldu,
+        call wzgesdd(jobz,krank,n,r(io+1),ldr,s,r(io+krank*n+1),ldu,
      1              v,ldvadj,r(io+krank*n+krank*krank+1),lwork,
      2              r(io+krank*n+krank*krank+lwork+1),r,info)
 c
@@ -235,7 +235,7 @@ c
             return
           endif
 c
-          call zgesdd(jobz,krank,n,w(io+1),ldr,w(isi),w(io+krank*n+1),
+          call wzgesdd(jobz,krank,n,w(io+1),ldr,w(isi),w(io+krank*n+1),
      1                ldu,w(ivi),ldvadj,w(io+krank*n+krank*krank+1),
      2                lwork,w(io+krank*n+krank*krank+lwork+1),w,info)
 c

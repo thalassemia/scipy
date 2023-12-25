@@ -174,7 +174,7 @@ c
         ldu = krank
         ldvt = krank
 c
-        call zgesdd(jobz,krank,krank,r3,ldr,s,work,ldu,r,ldvt,
+        call wzgesdd(jobz,krank,krank,r3,ldr,s,work,ldu,r,ldvt,
      1              work(krank**2+2*krank+3*krank**2+4*krank+1),lwork,
      2              work(krank**2+2*krank+1),work(krank**2+1),info)
 c

@@ -88,7 +88,7 @@ c
         ldu = krank
         ldvt = krank
 c
-        call dgesdd(jobz,krank,n,r(io+1),ldr,s,r(io+krank*n+1),ldu,
+        call wdgesdd(jobz,krank,n,r(io+1),ldr,s,r(io+krank*n+1),ldu,
      1              v,ldvt,r(io+krank*n+krank*krank+1),lwork,r,info)
 c
         if(info .ne. 0) then
@@ -231,7 +231,7 @@ c
             return
           endif
 c
-          call dgesdd(jobz,krank,n,w(io+1),ldr,w(isi),w(io+krank*n+1),
+          call wdgesdd(jobz,krank,n,w(io+1),ldr,w(isi),w(io+krank*n+1),
      1                ldu,w(ivi),ldvt,w(io+krank*n+krank*krank+1),
      2                lwork,w,info)
 c
