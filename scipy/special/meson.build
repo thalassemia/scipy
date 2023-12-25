@@ -335,6 +335,7 @@ py3.extension_module('_ufuncs',
   dependencies: [
     npymath_lib,
     np_dep,
+    lapack
   ],
   link_args: version_link_args,
   link_with: [

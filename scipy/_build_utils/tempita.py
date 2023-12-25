@@ -26,7 +26,7 @@ def process_tempita(fromfile, outfile=None, kwargs=None):
         kwargs = {}
     content = template.substitute(**kwargs)
 
-    with open(outfile, 'w') as f:
+    with open(outfile, 'w', encoding='utf-8') as f:
         f.write(content)
 
 
