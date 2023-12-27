@@ -6,7 +6,7 @@ void BLAS_FUNC(zgesdd)(char *jobz, F_INT *m, F_INT *n, npy_complex128 *a, F_INT 
 
 #ifdef HAVE_BLAS_ILP64
 void F_FUNC(wdgesdd, WDGESDD)(char *jobz, int *m, int *n, double *a, int *lda, double *s, double *u, int *ldu, double *vt, int *ldvt, double *work, int *lwork, int *iwork, int *info){
-    # iwork has minimum size 8*min(m,n)
+    // iwork has minimum size 8*min(m,n)
     int iwork_dim = 8 * *m;
     F_INT* iwork_temp = malloc(iwork_dim * sizeof(F_INT));
     if (iwork_temp == NULL) {
@@ -22,7 +22,7 @@ void F_FUNC(wdgesdd, WDGESDD)(char *jobz, int *m, int *n, double *a, int *lda, d
     F_INT lwork_temp = *lwork;
     F_INT info_temp = *info;
     BLAS_FUNC(dgesdd)(jobz,&m_temp,&n_temp,a,&lda_temp,s,u,&ldu_temp,vt,&ldvt_temp,work,&lwork_temp,iwork_temp,&info_temp);
-    # info and iwork are the only variables mutated by zgesdd
+    // info and iwork are the only variables mutated by zgesdd
     *info = (int)info_temp;
     for (size_t i = 0; i < iwork_dim; ++i) {
         iwork[i] = (int)(iwork_temp[i]);
@@ -31,7 +31,7 @@ void F_FUNC(wdgesdd, WDGESDD)(char *jobz, int *m, int *n, double *a, int *lda, d
 }
 
 void F_FUNC(wzgesdd, WZGESDD)(char *jobz, int *m, int *n, npy_complex128 *a, int *lda, double *s, npy_complex128 *u, int *ldu, npy_complex128 *vt, int *ldvt, npy_complex128 *work, int *lwork, double *rwork, int *iwork, int *info){
-    # iwork has minimum size 8*min(m,n)
+    // iwork has minimum size 8*min(m,n)
     int iwork_dim = 8* *m;
     F_INT* iwork_temp = malloc(iwork_dim * sizeof(F_INT));
     if (iwork_temp == NULL) {
@@ -47,7 +47,7 @@ void F_FUNC(wzgesdd, WZGESDD)(char *jobz, int *m, int *n, npy_complex128 *a, int
     F_INT lwork_temp = *lwork;
     F_INT info_temp = *info;
     BLAS_FUNC(zgesdd)(jobz,&m_temp,&n_temp,a,&lda_temp,s,u,&ldu_temp,vt,&ldvt_temp,work,&lwork_temp,rwork,iwork_temp,&info_temp);
-    # info and iwork are the only variables mutated by zgesdd
+    // info and iwork are the only variables mutated by zgesdd
     *info = (int)info_temp;
     for (size_t i = 0; i < iwork_dim; ++i) {
         iwork[i] = (int)(iwork_temp[i]);

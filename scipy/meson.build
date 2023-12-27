@@ -189,7 +189,7 @@ if use_ilp64
     blas_name += '64'
     _args_blas += ['-DOPENBLAS_ILP64_NAMING_SCHEME', '-DBLAS_SYMBOL_SUFFIX=64_']
   elif blas_name == 'mkl'
-    blas_symbol_suffix = '64_'
+    blas_symbol_suffix = '_64'
     _args_blas += ['-DBLAS_SYMBOL_SUFFIX=_64']
   endif
 endif

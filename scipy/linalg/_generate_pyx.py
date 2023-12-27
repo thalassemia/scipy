@@ -5,7 +5,6 @@ from the files "cython_blas_signatures.txt" and
 all the BLAS/LAPACK routines that should be included in the wrappers.
 """
 
-from collections import defaultdict
 from operator import itemgetter
 import os
 from stat import ST_MTIME
@@ -23,10 +22,10 @@ fortran_types = {'int': 'integer',
                  'bint': 'logical'}
 
 c_types = {'int': 'F_INT',
-           'c': 'npy_complex64',
+           'c': 'float complex',
            'd': 'double',
            's': 'float',
-           'z': 'npy_complex128',
+           'z': 'double complex',
            'char': 'char',
            'bint': 'F_INT',
            'cselect1': '_cselect1',
@@ -43,16 +42,15 @@ def arg_names_and_types(args):
     return zip(*[arg.split(' *') for arg in args.split(', ')])
 
 
-pyx_func_template = """
-cdef extern from "{header_name}":
-    void _fortran_{name} "w{name}"({ret_type} *out, {fort_args}) nogil
+pyx_func_template = """cdef extern from "{header_name}":
+    {ret_type} _fortran_{name} "{fort_macro}({fort_name})"({fort_args}) nogil
 cdef {ret_type} {name}({args}) noexcept nogil:
-    cdef {ret_type} out
-    _fortran_{name}(&out, {argnames})
-    return out
+    return _fortran_{name}({argnames})
 """
 
-npy_types = {'c': 'npy_complex64', 'z': 'npy_complex128',
+wrapped_funcs = ['cdotc', 'zdotc', 'cdotu', 'zdotu', 'cladiv', 'zladiv']
+
+npy_types = {'c': 'float complex', 'z': 'double complex',
              'cselect1': '_cselect1', 'cselect2': '_cselect2',
              'dselect2': '_dselect2', 'dselect3': '_dselect3',
              'sselect2': '_sselect2', 'sselect3': '_sselect3',
@@ -60,14 +58,14 @@ npy_types = {'c': 'npy_complex64', 'z': 'npy_complex128',
 
 
 def arg_casts(arg):
-    if arg in ['npy_complex64', 'npy_complex128', '_cselect1', '_cselect2',
+    if arg in ['_cselect1', '_cselect2',
                '_dselect2', '_dselect3', '_sselect2', '_sselect3',
                '_zselect1', '_zselect2']:
         return f'<{arg}*>'
     return ''
 
 
-def pyx_decl_func(name, ret_type, args, header_name):
+def pyx_decl_func(name, ret_type, args, header_name, suffix):
     argtypes, argnames = arg_names_and_types(args)
     # Fix the case where one of the arguments has the same name as the
     # abbreviation for the argument type.
@@ -87,9 +85,16 @@ def pyx_decl_func(name, ret_type, args, header_name):
     argnames = ', '.join(argnames)
     ret_type = ret_type.replace('bint', 'bi_type').replace('int', 'i_type')
     args = args.replace('lambda', 'lambda_')
-    return pyx_func_template.format(name=name, upname=name.upper(), args=args,
+    fort_name = name
+    fort_macro = 'BLAS_FUNC'
+    if name in wrapped_funcs:
+        fort_name = f'w{name}'
+    elif '$NEWLAPACK' in suffix and name in ['lsame', 'dcabs1']:
+        fort_macro = ''
+        fort_name = f'{name}_'
+    return pyx_func_template.format(name=name, fort_name=fort_name, args=args,
                                     fort_args=fort_args, ret_type=ret_type,
-                                    argnames=argnames,
+                                    argnames=argnames, fort_macro=fort_macro,
                                     header_name=header_name)
 
 
@@ -162,8 +167,6 @@ Raw function pointers (Fortran-style pointer arguments):
 cdef extern from "fortran_defs.h":
     pass
 
-from numpy cimport npy_complex64, npy_complex128
-
 '''
 
 
@@ -209,19 +212,17 @@ Raw function pointers (Fortran-style pointer arguments):
 cdef extern from "fortran_defs.h":
     pass
 
-from numpy cimport npy_complex64, npy_complex128
-
 cdef extern from "_lapack_subroutines.h":
     # Function pointer type declarations for
     # gees and gges families of functions.
-    ctypedef bint _cselect1(npy_complex64*)
-    ctypedef bint _cselect2(npy_complex64*, npy_complex64*)
+    ctypedef bint _cselect1(float complex*)
+    ctypedef bint _cselect2(float complex*, float complex*)
     ctypedef bint _dselect2(d*, d*)
     ctypedef bint _dselect3(d*, d*, d*)
     ctypedef bint _sselect2(s*, s*)
     ctypedef bint _sselect3(s*, s*, s*)
-    ctypedef bint _zselect1(npy_complex128*)
-    ctypedef bint _zselect2(npy_complex128*, npy_complex128*)
+    ctypedef bint _zselect1(double complex*)
+    ctypedef bint _zselect2(double complex*, double complex*)
 
 '''
 
@@ -434,7 +435,7 @@ cpdef double complex _test_zdotu(double complex[:] zx, double complex[:] zy) noe
 
 
 def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name,))) for s in func_sigs)
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix))) for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
     return make_blas_pyx_preamble(all_sigs) + funcs + subs + blas_py_wrappers.replace('bint', 'bi_type').replace('int', 'i_type')
@@ -463,16 +464,13 @@ def _test_slamch(cmach):
 
 
 def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name,))) for s in func_sigs)
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix))) for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
     preamble = make_lapack_pyx_preamble(all_sigs)
     return preamble + funcs + subs + lapack_py_wrappers
 
 
-pxd_template = """ctypedef {ret_type} {name}_t({args}) noexcept nogil
-cdef {name}_t *{name}_f
-"""
 pxd_template = """cdef {ret_type} {name}({args}) noexcept nogil
 """
 
@@ -559,69 +557,56 @@ def make_c_args(args):
     return ', '.join(f'{t} *{n}' for t, n in zip(types, names)), ','.join(names)
 
 
-c_func_template = """
-{return_type} {fort_macro}({fort_name})({args});
-void w{name}({return_type} *ret, {args}){{
-    *ret = {fort_macro}({fort_name})({f_args});
+c_func_template = "{return_type} {fort_macro}({name})({args});\n"
+
+
+complex_dot_template = """void CBLAS_FUNC(cblas_{name}_sub)({f_args}, {return_type} *ret);
+{return_type} BLAS_FUNC(w{name})({args}){{
+    {return_type} ret;
+    CBLAS_FUNC(cblas_{name}_sub)({c_args}, &ret);
+    return ret;
 }}
 """
 
 
-complex_dot_template = """
-void CBLAS_FUNC(cblas_{name}_sub)({f_args}, {return_type} *ret);
-void w{name}({return_type} *ret, {args}){{
-    CBLAS_FUNC(cblas_{name}_sub)({c_args}, ret);
+ladiv_template = """void BLAS_FUNC({fort_name})({f_args}, {float_type} *retr, {float_type} *reti);
+{return_type} BLAS_FUNC(w{name})({args}){{
+    {return_type} ret;
+    {float_type} *x_val = *({float_type}(*)[2])&x;
+    {float_type} *y_val = *({float_type}(*)[2])&y;
+    {float_type} *ret_val = *({float_type}(*)[2])&ret;
+    BLAS_FUNC({fort_name})(&x_val[0], &x_val[1], &y_val[0], &y_val[1], &ret_val[0], &ret_val[1]);
+    return ret;
 }}
 """
 
 
-ladiv_template = """
-void BLAS_FUNC({fort_name})({f_args}, {float_type} *retr, {float_type} *reti);
-void w{name}({return_type} *ret, {args}){{
-    {float_type} zr, zi, xr, xi, yr, yi;
-    xr = npy_creal{f}(*x);
-    xi = npy_cimag{f}(*x);
-    yr = npy_creal{f}(*y);
-    yi = npy_cimag{f}(*y);
-    BLAS_FUNC({fort_name})(&xr, &xi, &yr, &yi, &zr, &zi);
-    NPY_CSETREAL(ret, zr);
-    NPY_CSETIMAG(ret, zi);
-}}
-"""
-
-
-def c_func_decl(name, return_type, args, suffix, g77):
-    orig_args = args
-    args, f_args = make_c_args(args)
-    return_type = c_types[return_type]
-    fort_name = name
-    fort_macro = 'BLAS_FUNC'
-    if '$NEWLAPACK' in suffix:
-        if name == 'dcabs1':
-            fort_macro = ''
-        elif name == 'lsame':
-            fort_macro = ''
-            fort_name += '_'
-        elif name in ['cdotc', 'cdotu', 'zdotc', 'zdotu']:
-            types, names = arg_names_and_types(orig_args)
-            types = [c_types[t] for t in types]
-            c_args = []
-            f_args = []
-            input_arrs = ['cx', 'cy', 'zx', 'zy']
-            for t, n in zip(types, names):
-                if n in input_arrs:
-                    f_args.append(f'{t} *{n}')
-                    c_args.append(n)
-                else:
-                    f_args.append(f'{t} {n}')
-                    c_args.append(f'*{n}')
-            f_args = ', '.join(f_args)
-            c_args = ', '.join(c_args)
-            return complex_dot_template.format(
-                name=name, return_type=return_type, args=args, f_args=f_args, 
-                c_args=c_args)
-    if g77 and name in ['cladiv', 'zladiv']:
+def c_func_decl(name, return_type, args, suffix, g77):       
+    if g77 and name in ['cdotc', 'cdotu', 'zdotc', 'zdotu']:
+        return_type = c_types[return_type]
         argtypes, argnames = arg_names_and_types(args)
+        argtypes = [c_types[t] for t in argtypes]
+        args = ', '.join(f'{t} *{n}' for t, n in zip(argtypes, argnames))
+        c_args = []
+        f_args = []
+        input_arrs = ['cx', 'cy', 'zx', 'zy']
+        for t, n in zip(argtypes, argnames):
+            if n in input_arrs:
+                f_args.append(f'{t} *{n}')
+                c_args.append(n)
+            else:
+                f_args.append(f'{t} {n}')
+                c_args.append(f'*{n}')
+        f_args = ', '.join(f_args)
+        c_args = ', '.join(c_args)
+        return complex_dot_template.format(
+            name=name, return_type=return_type, args=args, f_args=f_args, 
+            c_args=c_args)
+    elif g77 and name in ['cladiv', 'zladiv']:
+        return_type = c_types[return_type]
+        argtypes, argnames = arg_names_and_types(args)
+        argtypes = [c_types[t] for t in argtypes]
+        args = ', '.join(f'{t} *{n}' for t, n in zip(argtypes, argnames))
         f_args = []
         if name == 'cladiv':
             fort_name = 'sladiv'
@@ -632,9 +617,9 @@ def c_func_decl(name, return_type, args, suffix, g77):
             float_type = 'double'
             f = ''
         for argtype, argname in zip(argtypes, argnames):
-            if argtype == 'npy_complex128':
+            if argtype == 'double complex':
                 f_args.append(f'double *{argname}r, double *{argname}i')
-            elif argtype == 'npy_complex64':
+            elif argtype == 'float complex':
                 f_args.append(f'float *{argname}r, float *{argname}i')
             else:
                 f_args.append(f'{argtype} *{argname}')
@@ -642,10 +627,15 @@ def c_func_decl(name, return_type, args, suffix, g77):
         return ladiv_template.format(name=name, fort_name=fort_name, 
             f_args=f_args, args=args, float_type=float_type, f=f, 
             return_type=return_type)
-    return c_func_template.format(name=name, upname=name.upper(),
-                                  return_type=return_type, args=args,
-                                  f_args=f_args, fort_macro=fort_macro,
-                                  fort_name=fort_name)
+    args, f_args = make_c_args(args)
+    return_type = c_types[return_type]
+    fort_macro = 'BLAS_FUNC'
+    if '$NEWLAPACK' in suffix and name in ['lsame', 'dcabs1']:
+        fort_macro = ''
+        name = f'{name}_'
+    return c_func_template.format(name=name,
+                                return_type=return_type, args=args,
+                                f_args=f_args, fort_macro=fort_macro)
 
 
 c_sub_template = "void {fort_macro}({name})({args});\n"
@@ -664,44 +654,19 @@ def c_sub_decl(name, return_type, args, suffix):
 c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
-#include "numpy/arrayobject.h"
-
-#include <numpy/npy_math.h>
-
-#ifndef NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPLEXCOMPAT_H_
-#define NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPLEXCOMPAT_H_
-
-#ifndef NPY_CSETREALF
-#define NPY_CSETREALF(c, r) (c)->real = (r)
-#endif
-#ifndef NPY_CSETIMAGF
-#define NPY_CSETIMAGF(c, i) (c)->imag = (i)
-#endif
-#ifndef NPY_CSETREAL
-#define NPY_CSETREAL(c, r)  (c)->real = (r)
-#endif
-#ifndef NPY_CSETIMAG
-#define NPY_CSETIMAG(c, i)  (c)->imag = (i)
-#endif
-#ifndef NPY_CSETREALL
-#define NPY_CSETREALL(c, r) (c)->real = (r)
-#endif
-#ifndef NPY_CSETIMAGL
-#define NPY_CSETIMAGL(c, i) (c)->imag = (i)
-#endif
-
-#endif
+#include <numpy/arrayobject.h>
+#include <complex.h> 
 """
 
 lapack_decls = """
-typedef int (*_cselect1)(npy_complex64*);
-typedef int (*_cselect2)(npy_complex64*, npy_complex64*);
+typedef int (*_cselect1)(float complex*);
+typedef int (*_cselect2)(float complex*, float complex*);
 typedef int (*_dselect2)(double*, double*);
 typedef int (*_dselect3)(double*, double*, double*);
 typedef int (*_sselect2)(float*, float*);
 typedef int (*_sselect3)(float*, float*, float*);
-typedef int (*_zselect1)(npy_complex128*);
-typedef int (*_zselect2)(npy_complex128*, npy_complex128*);
+typedef int (*_zselect1)(double complex*);
+typedef int (*_zselect2)(double complex*, double complex*);
 """
 
 cpp_guard = """
@@ -852,7 +817,7 @@ if __name__ == '__main__':
                         help="Suffix for Apple Accelerate")
     parser.add_argument("-i", "--int-type", type=str, default="int",
                         help="Integer type to use")
-    parser.add_argument("-g", "--g77", type=bool, default=False,
+    parser.add_argument("-g", "--g77", action="store_true",
                         help="Whether to generate g77 wrappers")
     args = parser.parse_args()
 

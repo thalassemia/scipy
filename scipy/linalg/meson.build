@@ -3,6 +3,11 @@
 __init__py = fs.copyfile('__init__.py')
 _cy_array_utils_pxd = fs.copyfile('_cythonized_array_utils.pxd')
 
+if use_g77_abi
+  g77_flag = '-g'
+else
+  g77_flag = ''
+endif
 cython_linalg = custom_target('cython_linalg',
   output: [
     'cython_blas.pyx',
@@ -14,8 +19,7 @@ cython_linalg = custom_target('cython_linalg',
   ],
   input: '_generate_pyx.py',
   command: [py3, '@INPUT@', '-o', '@OUTDIR@', 
-    '-s', blas_symbol_suffix, '-i', blas_int_type,
-    '-g', use_g77_abi.to_string()],
+    '-s', blas_symbol_suffix, '-i', blas_int_type, g77_flag],
   depend_files: [
     'cython_blas_signatures.txt',
     'cython_lapack_signatures.txt',
