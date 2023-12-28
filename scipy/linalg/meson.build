@@ -6,7 +6,7 @@ _cy_array_utils_pxd = fs.copyfile('_cythonized_array_utils.pxd')
 if use_g77_abi
   g77_flag = '-g'
 else
-  g77_flag = ''
+  g77_flag = []
 endif
 cython_linalg = custom_target('cython_linalg',
   output: [

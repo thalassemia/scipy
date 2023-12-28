@@ -65,7 +65,7 @@ def arg_casts(arg):
     return ''
 
 
-def pyx_decl_func(name, ret_type, args, header_name, suffix):
+def pyx_decl_func(name, ret_type, args, header_name, suffix, g77):
     argtypes, argnames = arg_names_and_types(args)
     # Fix the case where one of the arguments has the same name as the
     # abbreviation for the argument type.
@@ -87,7 +87,7 @@ def pyx_decl_func(name, ret_type, args, header_name, suffix):
     args = args.replace('lambda', 'lambda_')
     fort_name = name
     fort_macro = 'BLAS_FUNC'
-    if name in wrapped_funcs:
+    if g77 and name in wrapped_funcs:
         fort_name = f'w{name}'
     elif '$NEWLAPACK' in suffix and name in ['lsame', 'dcabs1']:
         fort_macro = ''
@@ -434,8 +434,8 @@ cpdef double complex _test_zdotu(double complex[:] zx, double complex[:] zy) noe
 """
 
 
-def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix))) for s in func_sigs)
+def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix, g77):
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix, g77))) for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
     return make_blas_pyx_preamble(all_sigs) + funcs + subs + blas_py_wrappers.replace('bint', 'bi_type').replace('int', 'i_type')
@@ -463,8 +463,8 @@ def _test_slamch(cmach):
 """
 
 
-def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix))) for s in func_sigs)
+def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix, g77):
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix, g77))) for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
     preamble = make_lapack_pyx_preamble(all_sigs)
@@ -780,7 +780,7 @@ def make_all(outdir,
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
     blas_sigs = filter_lines(blas_sigs)
-    blas_pyx = generate_blas_pyx(*(blas_sigs + (blas_header_name, suffix)))
+    blas_pyx = generate_blas_pyx(*(blas_sigs + (blas_header_name, suffix, g77)))
     with open(os.path.join(outdir, blas_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
         f.write(blas_pyx)
@@ -795,7 +795,7 @@ def make_all(outdir,
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
-    lapack_pyx = generate_lapack_pyx(*(lapack_sigs + (lapack_header_name, suffix)))
+    lapack_pyx = generate_lapack_pyx(*(lapack_sigs + (lapack_header_name, suffix, g77)))
     with open(os.path.join(outdir, lapack_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
         f.write(lapack_pyx)
