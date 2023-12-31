@@ -9,6 +9,10 @@ from operator import itemgetter
 import os
 from stat import ST_MTIME
 import argparse
+import re
+
+int_re = re.compile(r"\bint\b")
+bint_re = re.compile(r"\bbint\b")
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -77,13 +81,15 @@ def pyx_decl_func(name, ret_type, args, header_name, suffix, g77):
                     for n in argnames]
         args = ', '.join([' *'.join([n, t])
                           for n, t in zip(argtypes, argnames)])
-    args = args.replace('bint', 'bi_type').replace('int', 'i_type')
+    args = int_re.sub(lambda _: npy_types['int'], args)
+    args = bint_re.sub(lambda _: npy_types['bint'], args)
     argtypes = [npy_types.get(t, t) for t in argtypes]
     fort_args = ', '.join([' *'.join([n, t])
                            for n, t in zip(argtypes, argnames)])
     argnames = [arg_casts(t) + n for n, t in zip(argnames, argtypes)]
     argnames = ', '.join(argnames)
-    ret_type = ret_type.replace('bint', 'bi_type').replace('int', 'i_type')
+    ret_type = int_re.sub(lambda _: npy_types['int'], ret_type)
+    ret_type = bint_re.sub(lambda _: npy_types['bint'], ret_type)
     args = args.replace('lambda', 'lambda_')
     fort_name = name
     fort_macro = 'BLAS_FUNC'
@@ -107,7 +113,8 @@ cdef void {name}({args}) noexcept nogil:
 
 def pyx_decl_sub(name, args, header_name, suffix):
     argtypes, argnames = arg_names_and_types(args)
-    args = args.replace('bint', 'bi_type').replace('int', 'i_type')
+    args = int_re.sub(lambda _: npy_types['int'], args)
+    args = bint_re.sub(lambda _: npy_types['bint'], args)
     argtypes = [npy_types.get(t, t) for t in argtypes]
     argnames = [n if n not in ['lambda', 'in'] else n + '_' for n in argnames]
     fort_args = ', '.join([' *'.join([n, t])
@@ -435,10 +442,17 @@ cpdef double complex _test_zdotu(double complex[:] zx, double complex[:] zy) noe
 
 
 def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, suffix, g77):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix, g77))) for s in func_sigs)
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, suffix, g77))) 
+                      for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, suffix)))
                             for s in sub_sigs)
-    return make_blas_pyx_preamble(all_sigs) + funcs + subs + blas_py_wrappers.replace('bint', 'bi_type').replace('int', 'i_type')
+    final_blas_py_wrappers = int_re.sub(
+        lambda _: npy_types['int'], blas_py_wrappers)
+    final_blas_py_wrappers = bint_re.sub(
+        lambda _: npy_types['bint'], final_blas_py_wrappers)
+    return "".join([
+        make_blas_pyx_preamble(all_sigs), funcs, subs, final_blas_py_wrappers
+    ])
 
 
 lapack_py_wrappers = """
@@ -477,8 +491,10 @@ pxd_template = """cdef {ret_type} {name}({args}) noexcept nogil
 
 def pxd_decl(name, ret_type, args):
     args = args.replace('lambda', 'lambda_').replace('*in,', '*in_,')
-    args = args.replace('bint', 'bi_type').replace('int', 'i_type')
-    ret_type = ret_type.replace('bint', 'bi_type').replace('int', 'i_type')
+    args = int_re.sub(lambda _: npy_types['int'], args)
+    args = bint_re.sub(lambda _: npy_types['bint'], args)
+    ret_type = int_re.sub(lambda _: npy_types['int'], ret_type)
+    ret_type = bint_re.sub(lambda _: npy_types['bint'], ret_type)
     return pxd_template.format(name=name, ret_type=ret_type, args=args)
 
 
@@ -499,16 +515,13 @@ ctypedef float complex c
 ctypedef double complex z
 
 from numpy cimport npy_int64
-ctypedef {i_type} i_type
-ctypedef {bi_type} bi_type
 
 """
 
 
 def generate_blas_pxd(all_sigs):
     body = '\n'.join(pxd_decl(*sig) for sig in all_sigs)
-    return blas_pxd_preamble.format(
-        i_type=npy_types['int'], bi_type=npy_types['bint']) + body
+    return blas_pxd_preamble + body
 
 
 lapack_pxd_preamble = """# Within SciPy, these wrappers can be used via relative or absolute cimport.
@@ -539,16 +552,12 @@ ctypedef bint zselect1(z*)
 ctypedef bint zselect2(z*, z*)
 
 from numpy cimport npy_int64
-ctypedef {i_type} i_type
-ctypedef {bi_type} bi_type
 
 """
 
 
 def generate_lapack_pxd(all_sigs):
-    return lapack_pxd_preamble.format(
-        i_type=npy_types['int'], bi_type=npy_types['bint']
-        ) + '\n'.join(pxd_decl(*sig) for sig in all_sigs)
+    return lapack_pxd_preamble + '\n'.join(pxd_decl(*sig) for sig in all_sigs)
 
 
 def make_c_args(args):
