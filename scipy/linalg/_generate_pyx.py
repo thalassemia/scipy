@@ -654,7 +654,7 @@ def c_sub_decl(name, return_type, args, suffix):
 c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
-#include <numpy/arrayobject.h>
+#include <numpy/npy_common.h>
 #include <complex.h> 
 """
 

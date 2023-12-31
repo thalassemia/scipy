@@ -1,5 +1,4 @@
 import argparse
-from operator import itemgetter
 import os
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -166,8 +165,6 @@ def c_sub_decl(name, return_type, args, suffix):
 c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
-#include "numpy/arrayobject.h"
-
 #include <numpy/npy_math.h>
 
 #ifndef NUMPY_CORE_INCLUDE_NUMPY_NPY_2_COMPLEXCOMPAT_H_
@@ -226,21 +223,20 @@ ccomment = ''.join(['/* ' + line.rstrip() + ' */\n'
                     for line in comments]) + '\n'
 
 
-def generate_c_file(func_sigs, sub_sigs, lib_name, suffix, g77, outdir):
+def generate_c_files(func_sigs, sub_sigs, lib_name, suffix, g77, outdir):
     if lib_name == 'LAPACK':
         preamble = (c_preamble.format(lib=lib_name) + lapack_decls)
-        out_name = 'lapack_wrappers.c'
     else:
         preamble = c_preamble.format(lib=lib_name)
-        out_name = 'blas_wrappers.c'
     funcs_and_subs = [ccomment, preamble, cpp_guard]
     for sig in func_sigs:
-        funcs_and_subs.append(c_func_decl(*(sig+(suffix, g77))))
+        with open(os.path.join(outdir, f'{sig[0]}.c'), 'w') as f:
+            f.writelines("".join(funcs_and_subs + [
+                c_func_decl(*(sig+(suffix, g77))), c_end]))
     for sig in sub_sigs:
-        funcs_and_subs.append(c_sub_decl(*(sig+(suffix,))))
-    funcs_and_subs.append(c_end)
-    with open(os.path.join(outdir, out_name), 'w') as func_file:
-        func_file.writelines("".join(funcs_and_subs))
+        with open(os.path.join(outdir, f'{sig[0]}.c'), 'w') as f:
+            f.writelines("".join(funcs_and_subs + [
+                c_sub_decl(*(sig+(suffix,))), c_end]))
 
 
 def make_all(outdir,
@@ -254,8 +250,8 @@ def make_all(outdir,
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
-    generate_c_file(*(blas_sigs + ('BLAS', suffix, g77, outdir)))
-    generate_c_file(*(lapack_sigs + ('LAPACK', suffix, g77, outdir)))
+    generate_c_files(*(blas_sigs + ('BLAS', suffix, g77, outdir)))
+    generate_c_files(*(lapack_sigs + ('LAPACK', suffix, g77, outdir)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -268,8 +264,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not args.outdir:
-        #raise ValueError(f"Missing `--outdir` argument to _generate_pyx.py")
-        # We're dealing with a distutils build here, write in-place:
         outdir_abs = os.path.abspath(os.path.dirname(__file__))
     else:
         outdir_abs = os.path.join(os.getcwd(), args.outdir)
