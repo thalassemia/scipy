@@ -1,6 +1,6 @@
-option('blas', type: 'string', value: 'accelerate',
+option('blas', type: 'string', value: 'openblas',
         description: 'option for BLAS library switching')
-option('lapack', type: 'string', value: 'accelerate',
+option('lapack', type: 'string', value: 'openblas',
         description: 'option for LAPACK library switching')
 option('use-ilp64', type: 'boolean', value: false,
        description: 'Use ILP64 (64-bit integer) BLAS and LAPACK interfaces')
