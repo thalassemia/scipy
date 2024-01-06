@@ -148,6 +148,21 @@ fortranobject_dep = declare_dependency(
 blas_name = get_option('blas')
 lapack_name = get_option('lapack')
 
+macOS13_3_or_later = false
+if host_machine.system() == 'darwin'
+  r = run_command('xcrun', '-sdk', 'macosx', '--show-sdk-version', check: true)
+  sdkVersion = r.stdout().strip()
+
+  macOS13_3_or_later = sdkVersion.version_compare('>=13.3')
+endif
+
+blas_symbol_suffix = ''
+_args_blas = []
+if blas_name == 'accelerate' and macOS13_3_or_later
+  blas_symbol_suffix = '$NEWLAPACK'
+  _args_blas += ['-DACCELERATE_NEW_LAPACK']
+endif
+
 # First try scipy-openblas, and if found don't look for cblas or lapack, we
 # know what's inside the scipy-openblas wheels already.
 if blas_name == 'openblas' or blas_name == 'auto'
@@ -164,6 +179,10 @@ if blas_name == 'openblas'
 elif blas_name != 'scipy-openblas'  # if so, we found it already
   blas = dependency(blas_name)
 endif
+blas_dep = declare_dependency(
+  dependencies: blas,
+  compile_args: _args_blas
+)
 if blas_name == 'blas'
   # Netlib BLAS has a separate `libcblas.so` which we use directly in the g77
   # ABI wrappers, so detect it and error out if we cannot find it.
@@ -184,6 +203,10 @@ elif lapack_name == 'openblas'
 else
   lapack = dependency(lapack_name)
 endif
+lapack_dep = declare_dependency(
+  dependencies: lapack,
+  compile_args: _args_blas
+)
 
 dependency_map = {
   'BLAS': blas,
@@ -490,6 +513,7 @@ configure_file(
 # have dependencies on cython_special.pxd and cython_linalg.pxd. After those,
 # subdirs with the most heavy builds should come first (that parallelizes
 # better)
+subdir('_build_utils')
 subdir('_lib')
 subdir('special')
 subdir('linalg')
