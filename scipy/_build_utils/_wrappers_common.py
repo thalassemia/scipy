@@ -66,8 +66,8 @@ CPP_GUARD_END = """
 
 def read_signatures(lines):
     """
-    Read BLAS/LAPACK signatures and split into name, return type, C parameter
-    list (e.g. `int* a, bint* b`), and argument names (e.g. `a, b`).
+    Read BLAS/LAPACK signatures and split into name, return type, argument
+    names, and argument types.
     """
     sigs = []
     for line in lines:
@@ -116,8 +116,14 @@ def all_newer(dst_files, src_files):
                for dst in dst_files for src in src_files)
 
 
-def get_blas_macro_and_name(name):
-    """Complex-valued functions have special symbols."""
+def get_blas_macro_and_name(name, accelerate):
+    """Complex-valued and some Accelerate functions have special symbols."""
+    # Not in new Accelerate (macOS 13.3+) so fallback to old
+    if accelerate:
+        if name in ['lsame', 'dcabs1']:
+            return '', f'{name}_'
+        elif name == 'xerbla_array':
+            return '', name + '__'
     if name in WRAPPED_FUNCS:
         return '', name + 'wrp_'
     return 'BLAS_FUNC', name
