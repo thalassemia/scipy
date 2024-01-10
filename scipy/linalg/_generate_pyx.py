@@ -44,11 +44,19 @@ cdef {ret_type} {name}({args}) noexcept nogil:
     return _fortran_{name}({argnames})
 """
 
-pyx_complex_func_template = """cdef extern from "{header_name}":
+pyx_cplx_dot_template = """cdef extern from "{header_name}":
     {c_ret_type} _fortran_{name} "F_FUNC({fort_name}, {fort_upname})"({fort_args}) nogil
 cdef {ret_type} {name}({args}) noexcept nogil:
     cdef {ret_type}complex ret;
     ret.numpy = _fortran_{name}({argnames});
+    return ret.cython
+"""
+
+pyx_cplx_ladiv_template = """cdef extern from "{header_name}":
+    void _fortran_{name} "F_FUNC({fort_name}, {fort_upname})"({c_ret_type} *ret, {fort_args}) nogil
+cdef {ret_type} {name}({args}) noexcept nogil:
+    cdef {ret_type}complex ret;
+    _fortran_{name}(&ret.numpy, {argnames});
     return ret.cython
 """
 
@@ -95,8 +103,13 @@ def pyx_decl_func(name, ret_type, args, header_name, accelerate):
         fort_name = f'{name}_'
     # Convert from Numpy complex types to Cython complex types
     # (-DCYTHON_CCOMPLEX=0 from gh-18875)
-    if ret_type == 'c' or ret_type == 'z':
-        return pyx_complex_func_template.format(name=name, fort_name=fort_name, 
+    if name in wrapped_funcs[:-2]:
+        return pyx_cplx_dot_template.format(name=name, fort_name=fort_name, 
+            fort_upname=fort_name.upper(), args=args, fort_args=fort_args, 
+            ret_type=ret_type, argnames=argnames, fort_macro=fort_macro,
+            header_name=header_name, c_ret_type=npy_types[ret_type])
+    elif name in wrapped_funcs[-2:]:
+        return pyx_cplx_ladiv_template.format(name=name, fort_name=fort_name, 
             fort_upname=fort_name.upper(), args=args, fort_args=fort_args, 
             ret_type=ret_type, argnames=argnames, fort_macro=fort_macro,
             header_name=header_name, c_ret_type=npy_types[ret_type])
@@ -620,6 +633,9 @@ def c_func_decl(name, return_type, args, accelerate):
         name = f'{name}_'
     elif name in wrapped_funcs:
         fort_macro = 'F_FUNC'
+        if name in wrapped_funcs[-2:]:
+            args = ''.join([return_type, ' *ret,', args])
+            return_type = 'void'
         name = f'w{name}, W{name.upper()}'
     return c_func_template.format(name=name, return_type=return_type, 
                                   args=args, fort_macro=fort_macro)
