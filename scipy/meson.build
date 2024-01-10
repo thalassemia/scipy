@@ -158,9 +158,11 @@ endif
 
 blas_symbol_suffix = ''
 _args_blas = []
+generate_blas_wrappers = false
 if blas_name == 'accelerate' and macOS13_3_or_later
   blas_symbol_suffix = '$NEWLAPACK'
   _args_blas += ['-DACCELERATE_NEW_LAPACK']
+  generate_blas_wrappers = true
 endif
 
 # First try scipy-openblas, and if found don't look for cblas or lapack, we

@@ -45,10 +45,10 @@ cdef {ret_type} {name}({args}) noexcept nogil:
 """
 
 pyx_complex_func_template = """cdef extern from "{header_name}":
-    {npy_ret_type} _fortran_{name} "{fort_macro}({fort_name})"({fort_args}) nogil
+    {c_ret_type} _fortran_{name} "F_FUNC({fort_name}, {fort_upname})"({fort_args}) nogil
 cdef {ret_type} {name}({args}) noexcept nogil:
-    cdef {float_type}_complex ret;
-    ret.npy = _fortran_{name}({argnames});
+    cdef {ret_type}complex ret;
+    ret.numpy = _fortran_{name}({argnames});
     return ret.cython
 """
 
@@ -67,7 +67,7 @@ def arg_casts(arg):
     return ''
 
 
-def pyx_decl_func(name, ret_type, args, header_name, accelerate, g77):
+def pyx_decl_func(name, ret_type, args, header_name, accelerate):
     argtypes, argnames = arg_names_and_types(args)
     # Fix the case where one of the arguments has the same name as the
     # abbreviation for the argument type.
@@ -87,7 +87,7 @@ def pyx_decl_func(name, ret_type, args, header_name, accelerate, g77):
     args = args.replace('lambda', 'lambda_')
     fort_name = name
     fort_macro = 'BLAS_FUNC'
-    if g77 and name in wrapped_funcs:
+    if name in wrapped_funcs:
         fort_name = f'w{name}'
     # Not in new Accelerate (macOS 13.3+) so fallback to old
     elif accelerate and name in ['lsame', 'dcabs1']:
@@ -96,12 +96,10 @@ def pyx_decl_func(name, ret_type, args, header_name, accelerate, g77):
     # Convert from Numpy complex types to Cython complex types
     # (-DCYTHON_CCOMPLEX=0 from gh-18875)
     if ret_type == 'c' or ret_type == 'z':
-        float_type = 'float' if ret_type == 'c' else 'double'
-        return pyx_complex_func_template.format(
-            name=name, fort_name=fort_name, args=args, fort_args=fort_args, 
+        return pyx_complex_func_template.format(name=name, fort_name=fort_name, 
+            fort_upname=fort_name.upper(), args=args, fort_args=fort_args, 
             ret_type=ret_type, argnames=argnames, fort_macro=fort_macro,
-            header_name=header_name, float_type=float_type, 
-            npy_ret_type=npy_types[ret_type])
+            header_name=header_name, c_ret_type=npy_types[ret_type])
     return pyx_func_template.format(name=name, fort_name=fort_name, args=args,
                                     fort_args=fort_args, ret_type=ret_type,
                                     argnames=argnames, fort_macro=fort_macro,
@@ -173,12 +171,12 @@ cdef extern from "fortran_defs.h":
 
 from numpy cimport npy_complex64, npy_complex128
 
-ctypedef union float_complex:
-    npy_complex64 npy
+ctypedef union ccomplex:
+    npy_complex64 numpy
     float complex cython
 
-ctypedef union double_complex:
-    npy_complex128 npy
+ctypedef union zcomplex:
+    npy_complex128 numpy
     double complex cython
 
 '''
@@ -228,12 +226,12 @@ cdef extern from "fortran_defs.h":
 
 from numpy cimport npy_complex64, npy_complex128
 
-ctypedef union float_complex:
-    npy_complex64 npy
+ctypedef union ccomplex:
+    npy_complex64 numpy
     float complex cython
 
-ctypedef union double_complex:
-    npy_complex128 npy
+ctypedef union zcomplex:
+    npy_complex128 numpy
     double complex cython
 
 cdef extern from "_lapack_subroutines.h":
@@ -458,9 +456,8 @@ cpdef double complex _test_zdotu(double complex[:] zx, double complex[:] zy) noe
 """
 
 
-def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, 
-                      accelerate, g77):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name, accelerate, g77))) 
+def generate_blas_pyx(func_sigs, sub_sigs, all_sigs, header_name, accelerate):
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, accelerate))) 
                       for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, accelerate)))
                             for s in sub_sigs)
@@ -497,8 +494,8 @@ cpdef float complex _test_cladiv(float complex cx, float complex cy) noexcept no
 """
 
 
-def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name, accelerate, g77):
-    funcs = "\n".join(pyx_decl_func(*(s+(header_name, accelerate, g77)))
+def generate_lapack_pyx(func_sigs, sub_sigs, all_sigs, header_name, accelerate):
+    funcs = "\n".join(pyx_decl_func(*(s+(header_name, accelerate)))
                       for s in func_sigs)
     subs = "\n" + "\n".join(pyx_decl_sub(*(s[::2]+(header_name, accelerate)))
                             for s in sub_sigs)
@@ -611,13 +608,19 @@ def make_c_args(args):
     return ', '.join(f'{t} *{n}' for t, n in zip(types, names))
 
 
-def c_func_decl(name, return_type, args):
+c_func_template = "{return_type} {fort_macro}({name})({args});\n"
+
+
+def c_func_decl(name, return_type, args, accelerate):        
     args = make_c_args(args)
     return_type = c_types[return_type]
     fort_macro = 'BLAS_FUNC'
     if accelerate and name in ['lsame', 'dcabs1']:
         fort_macro = ''
         name = f'{name}_'
+    elif name in wrapped_funcs:
+        fort_macro = 'F_FUNC'
+        name = f'w{name}, W{name.upper()}'
     return c_func_template.format(name=name, return_type=return_type, 
                                   args=args, fort_macro=fort_macro)
     if name not in wrapped_funcs:
@@ -642,7 +645,6 @@ c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
 #include "fortran_defs.h"
 #include "npy_cblas.h"
-#include "npy_2_complexcompat.h"
 """
 
 lapack_decls = """
@@ -671,9 +673,8 @@ c_end = """
 """
 
 
-def generate_c_header(func_sigs, sub_sigs, all_sigs, lib_name, 
-                      accelerate, g77):
-    funcs = "".join(c_func_decl(*(sig + (accelerate, g77))) 
+def generate_c_header(func_sigs, sub_sigs, all_sigs, lib_name, accelerate):
+    funcs = "".join(c_func_decl(*(sig + (accelerate,))) 
                     for sig in func_sigs)
     subs = "\n" + "".join(c_sub_decl(*(sig + (accelerate,))) 
                           for sig in sub_sigs)
@@ -732,8 +733,7 @@ def make_all(outdir,
              lapack_fortran_name="_lapack_subroutine_wrappers.f",
              blas_header_name="_blas_subroutines.h",
              lapack_header_name="_lapack_subroutines.h",
-             accelerate=False,
-             g77=False):
+             accelerate=False):
 
     src_files = (os.path.abspath(__file__),
                  blas_signature_file,
@@ -763,7 +763,7 @@ def make_all(outdir,
         blas_sigs = f.readlines()
     blas_sigs = filter_lines(blas_sigs)
     blas_pyx = generate_blas_pyx(*(blas_sigs + 
-                                   (blas_header_name, accelerate, g77)))
+                                   (blas_header_name, accelerate)))
     with open(os.path.join(outdir, blas_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
         f.write(blas_pyx)
@@ -771,7 +771,7 @@ def make_all(outdir,
     with open(os.path.join(outdir, blas_name + '.pxd'), 'w') as f:
         f.write(pyxcomment)
         f.write(blas_pxd)
-    blas_c_header = generate_c_header(*(blas_sigs + ('BLAS', accelerate, g77)))
+    blas_c_header = generate_c_header(*(blas_sigs + ('BLAS', accelerate)))
     with open(os.path.join(outdir, blas_header_name), 'w') as f:
         f.write(ccomment)
         f.write(blas_c_header)
@@ -779,7 +779,7 @@ def make_all(outdir,
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
     lapack_pyx = generate_lapack_pyx(*(lapack_sigs + 
-                                       (lapack_header_name, accelerate, g77)))
+                                       (lapack_header_name, accelerate)))
     with open(os.path.join(outdir, lapack_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
         f.write(lapack_pyx)
@@ -788,7 +788,7 @@ def make_all(outdir,
         f.write(pyxcomment)
         f.write(lapack_pxd)
     lapack_c_header = generate_c_header(*(lapack_sigs + 
-                                          ('LAPACK', accelerate, g77)))
+                                          ('LAPACK', accelerate)))
     with open(os.path.join(outdir, lapack_header_name), 'w') as f:
         f.write(ccomment)
         f.write(lapack_c_header)
@@ -800,8 +800,6 @@ if __name__ == '__main__':
                         help="Path to the output directory")
     parser.add_argument("-a", "--accelerate", action="store_true",
                         help="Whether to use new Accelerate (macOS 13.3+)")
-    parser.add_argument("-g", "--g77", action="store_true",
-                        help="Whether to generate g77 wrappers")
     args = parser.parse_args()
 
     if not args.outdir:
@@ -809,4 +807,4 @@ if __name__ == '__main__':
     else:
         outdir_abs = os.path.join(os.getcwd(), args.outdir)
 
-    make_all(outdir_abs, accelerate=args.accelerate, g77=args.g77)
+    make_all(outdir_abs, accelerate=args.accelerate)
