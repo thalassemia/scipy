@@ -13,18 +13,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  get_commit_message:
-    name: Get commit message
-    uses: ./.github/workflows/commit_message.yml
-
   #############################################################################
   full_build_sdist_wheel:
     # TODO: enable ILP64 once possible
     name: cp311 (build sdist + wheel), full, no pythran
-    needs: get_commit_message
-    if: >
-      needs.get_commit_message.outputs.message == 1
-      && (github.repository == 'scipy/scipy' || github.repository == '')
     runs-on: windows-2019
     steps:
       - name: Checkout
