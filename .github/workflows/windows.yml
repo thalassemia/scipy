@@ -45,7 +45,7 @@ jobs:
 
       - name: Install meson-python branch
         run: |
-          pip install git+https://github.com/thalassemia/meson-python.git@windows_rm
+          pip install git+https://github.com/thalassemia/meson-python.git@personal
 
       - name: pip-packages
         run: |
