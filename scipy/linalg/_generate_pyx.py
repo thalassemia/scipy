@@ -624,23 +624,16 @@ def make_c_args(args):
 c_func_template = "{return_type} {fort_macro}({name})({args});\n"
 
 
-def c_func_decl(name, return_type, args, accelerate):        
+def c_func_decl(name, return_type, args, accelerate):
     args = make_c_args(args)
     return_type = c_types[return_type]
-    fort_macro = 'BLAS_FUNC'
-    if accelerate and name in ['lsame', 'dcabs1']:
-        fort_macro = ''
-        name = f'{name}_'
-    elif name in wrapped_funcs:
-        fort_macro = 'F_FUNC'
-        if name in wrapped_funcs[-2:]:
-            args = ''.join([return_type, ' *ret,', args])
-            return_type = 'void'
-        name = f'w{name}, W{name.upper()}'
-    return c_func_template.format(name=name, return_type=return_type, 
-                                  args=args, fort_macro=fort_macro)
     if name not in wrapped_funcs:
-        return f"{return_type} F_FUNC({name}, {name.upper()})({args});\n"
+        fort_macro = 'BLAS_FUNC'
+        # Not in new Accelerate (macOS 13.3+) so fallback to old
+        if accelerate and name in ['lsame', 'dcabs1']:
+            fort_macro = ''
+            name = f'{name}_'
+        return f"{return_type} {fort_macro}({name})({args});\n"
     return f"void F_FUNC({name}wrp, {name.upper()}WRP)({return_type} *ret, {args});\n"
 
 
@@ -778,7 +771,7 @@ def make_all(outdir,
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
     blas_sigs = filter_lines(blas_sigs)
-    blas_pyx = generate_blas_pyx(*(blas_sigs + 
+    blas_pyx = generate_blas_pyx(*(blas_sigs +
                                    (blas_header_name, accelerate)))
     with open(os.path.join(outdir, blas_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
@@ -794,7 +787,7 @@ def make_all(outdir,
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = filter_lines(lapack_sigs)
-    lapack_pyx = generate_lapack_pyx(*(lapack_sigs + 
+    lapack_pyx = generate_lapack_pyx(*(lapack_sigs +
                                        (lapack_header_name, accelerate)))
     with open(os.path.join(outdir, lapack_name + '.pyx'), 'w') as f:
         f.write(pyxcomment)
@@ -803,7 +796,11 @@ def make_all(outdir,
     with open(os.path.join(outdir, lapack_name + '.pxd'), 'w') as f:
         f.write(pyxcomment)
         f.write(lapack_pxd)
-    lapack_c_header = generate_c_header(*(lapack_sigs + 
+    lapack_fortran = generate_fortran(lapack_sigs[0])
+    with open(os.path.join(outdir, lapack_fortran_name), 'w') as f:
+        f.write(fcomment)
+        f.write(lapack_fortran)
+    lapack_c_header = generate_c_header(*(lapack_sigs +
                                           ('LAPACK', accelerate)))
     with open(os.path.join(outdir, lapack_header_name), 'w') as f:
         f.write(ccomment)
