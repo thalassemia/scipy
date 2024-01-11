@@ -44,13 +44,13 @@ jobs:
           bash tools/wheels/cibw_before_build_win.sh .
           echo "PKG_CONFIG_PATH=c:\opt\64\lib\pkgconfig;" >> $GITHUB_ENV
 
-      - name: Install meson branch
+      - name: Install meson-python branch
         run: |
-          pip install git+https://github.com/thalassemia/meson@windows_proof_rm
+          pip install git+https://github.com/thalassemia/meson-python.git@windows_rm
 
       - name: pip-packages
         run: |
-          python -m pip install build delvewheel cython pybind11 meson-python ninja pytest pytest-xdist pytest-timeout pooch hypothesis
+          python -m pip install build delvewheel cython pybind11 meson ninja pytest pytest-xdist pytest-timeout pooch hypothesis
           python -m pip install --pre --upgrade --timeout=60 -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy
 
       - name: Build
