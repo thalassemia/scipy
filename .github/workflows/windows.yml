@@ -45,6 +45,7 @@ jobs:
 
       - name: Install meson branch
         run: |
+          pip install --upgrade psutil
           pip install git+https://github.com/thalassemia/meson.git@personal
 
       - name: pip-packages
