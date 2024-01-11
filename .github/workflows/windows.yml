@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  #############################################################################
   full_build_sdist_wheel:
     # TODO: enable ILP64 once possible
     name: cp311 (build sdist + wheel), full, no pythran
