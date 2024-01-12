@@ -28,6 +28,12 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: 'environment.yml'
+      
+      - name: Install handle
+        run : |
+          (New-Object System.Net.WebClient).DownloadFile("https://download.sysinternals.com/files/Handle.zip","Handle.zip");
+          Expand-Archive .\Handle.zip .;
+          echo "$((Get-Item .).FullName)/Handle" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install meson branch
         run: |
