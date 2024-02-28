@@ -29,9 +29,3 @@ if generate_blas_wrappers
 else
   blas_lapack_wrapper_lib = []
 endif
-
-blas_complex_wrp = declare_dependency(
-  sources: ['src/complex_blas.c'],
-  dependencies: [blas_dep, lapack_dep, np_dep, py3_dep],
-  include_directories: ['../linalg/', './src'],
-)

@@ -222,7 +222,7 @@ dependency_map = {
 #        in general to enable the ILP64 interface (also for OpenBLAS).
 uses_mkl = blas.name().to_lower().startswith('mkl') or lapack.name().to_lower().startswith('mkl')
 uses_accelerate = blas.name().to_lower().startswith('accelerate') or lapack.name().to_lower().startswith('accelerate')
-use_g77_abi = uses_mkl or uses_accelerate or get_option('use-g77-abi') or host_machine.cpu_family() == 'x86'
+use_g77_abi = uses_mkl or uses_accelerate or get_option('use-g77-abi')
 if use_g77_abi
   g77_abi_wrappers = declare_dependency(
     sources: ['_build_utils/src/wrap_g77_abi.c'],

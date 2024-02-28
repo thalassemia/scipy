@@ -17,7 +17,7 @@ cython_linalg = custom_target('cython_linalg',
     '_blas_subroutines.h',
     '_lapack_subroutines.h',
     '_blas_subroutine_wrappers.f',
-    '_lapack_subroutine_wrappers.f',
+    '_lapack_subroutine_wrappers.f'
   ],
   input: '_generate_pyx.py',
   command: [py3, '@INPUT@', '-o', '@OUTDIR@', accelerate_flag],
@@ -201,15 +201,13 @@ cython_blas = py3.extension_module('cython_blas',
     cython_linalg[4],  # _blas_subroutines.h
   ],
   c_args: cython_c_args,
-  link_with: fwrappers,
+  link_with: [fwrappers, blas_lapack_wrapper_lib],
   link_args: version_link_args,
   dependencies: [lapack_dep, blas_dep, np_dep],
   install: true,
   include_directories: ['../_build_utils/src'],
   link_language: 'fortran',
-  link_with: [fwrappers, blas_lapack_wrapper_lib],
-  subdir: 'scipy/linalg',
-  include_directories: ['../_build_utils/src'],
+  subdir: 'scipy/linalg'
 )
 
 cython_lapack = py3.extension_module('cython_lapack',
@@ -218,15 +216,13 @@ cython_lapack = py3.extension_module('cython_lapack',
     cython_linalg[5],  # _lapack_subroutines.h
   ],
   c_args: cython_c_args,
-  link_with: fwrappers,
+  link_with: [fwrappers, blas_lapack_wrapper_lib],
   link_args: version_link_args,
   dependencies: [lapack_dep, blas_dep, np_dep],
   install: true,
   include_directories: ['../_build_utils/src'],
   link_language: 'fortran',
-  link_with: [fwrappers, blas_lapack_wrapper_lib],
-  subdir: 'scipy/linalg',
-  include_directories: ['../_build_utils/src'],
+  subdir: 'scipy/linalg'
 )
 
 py3.extension_module('_decomp_lu_cython',
