@@ -46,28 +46,6 @@ def arg_names_and_types(args):
 # handle G77 ABI in MKL and Accelerate
 wrapped_funcs = ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']
 
-pyx_func_template = """cdef extern from "{header_name}":
-    {ret_type} _fortran_{name} "{fort_macro}({fort_name})"({fort_args}) nogil
-cdef {ret_type} {name}({args}) noexcept nogil:
-    return _fortran_{name}({argnames})
-"""
-
-pyx_cplx_dot_template = """cdef extern from "{header_name}":
-    {c_ret_type} _fortran_{name} "F_FUNC({fort_name}, {fort_upname})"({fort_args}) nogil
-cdef {ret_type} {name}({args}) noexcept nogil:
-    cdef {ret_type}complex ret;
-    ret.numpy = _fortran_{name}({argnames});
-    return ret.cython
-"""
-
-pyx_cplx_ladiv_template = """cdef extern from "{header_name}":
-    void _fortran_{name} "F_FUNC({fort_name}, {fort_upname})"({c_ret_type} *ret, {fort_args}) nogil
-cdef {ret_type} {name}({args}) noexcept nogil:
-    cdef {ret_type}complex ret;
-    _fortran_{name}(&ret.numpy, {argnames});
-    return ret.cython
-"""
-
 npy_types = {'c': 'npy_complex64', 'z': 'npy_complex128',
              'cselect1': '_cselect1', 'cselect2': '_cselect2',
              'dselect2': '_dselect2', 'dselect3': '_dselect3',
@@ -569,38 +547,6 @@ def generate_lapack_pxd(all_sigs):
     return lapack_pxd_preamble + '\n'.join(pxd_decl(*sig) for sig in all_sigs)
 
 
-fortran_template = """      subroutine {name}wrp(
-     +    ret,
-     +    {argnames}
-     +    )
-        external {wrapper}
-        {ret_type} {wrapper}
-        {ret_type} ret
-        {argdecls}
-        ret = {wrapper}(
-     +    {argnames}
-     +    )
-      end
-"""
-
-
-def fort_subroutine_wrapper(name, ret_type, args):
-    if name not in wrapped_funcs:
-        return ""
-    wrapper = "w" + name
-    types, names = arg_names_and_types(args)
-    argnames = ',\n     +    '.join(names)
-    argdecls = '\n        '.join(f'{fortran_types[t]} {n}'
-                                 for n, t in zip(names, types))
-    return fortran_template.format(name=name, wrapper=wrapper,
-                                   argnames=argnames, argdecls=argdecls,
-                                   ret_type=fortran_types[ret_type])
-
-
-def generate_fortran(func_sigs):
-    return "\n".join(fort_subroutine_wrapper(*sig) for sig in func_sigs)
-
-
 def make_c_args(args):
     types, names = arg_names_and_types(args)
     types = [c_types[arg] for arg in types]
@@ -609,13 +555,15 @@ def make_c_args(args):
 
 def c_func_decl(name, return_type, args, accelerate):
     args = make_c_args(args)
+    fort_macro = 'BLAS_FUNC'
     return_type = c_types[return_type]
     if name in wrapped_funcs:
-        return (f"void F_FUNC({name}wrp, {name.upper()}WRP)"
-                f"({return_type} *ret, {args});\n")
-    fort_macro = 'BLAS_FUNC'
+        fort_macro = 'F_FUNC'
+        name = f'{name}wrp, {name.upper()}WRP'
+        args = f'{return_type} *ret, ' + args
+        return_type = 'void'
     # Not in new Accelerate (macOS 13.3+) so fallback to old
-    if accelerate and name in ['lsame', 'dcabs1']:
+    elif accelerate and name in ['lsame', 'dcabs1']:
         fort_macro = ''
         name = f'{name}_'
     return f"{return_type} {fort_macro}({name})({args});\n"
@@ -719,8 +667,6 @@ def make_all(outdir,
              lapack_signature_file="cython_lapack_signatures.txt",
              blas_name="cython_blas",
              lapack_name="cython_lapack",
-             blas_fortran_name="_blas_subroutine_wrappers.f",
-             lapack_fortran_name="_lapack_subroutine_wrappers.f",
              blas_header_name="_blas_subroutines.h",
              lapack_header_name="_lapack_subroutines.h",
              accelerate=False):
@@ -730,11 +676,9 @@ def make_all(outdir,
                  lapack_signature_file)
     dst_files = (blas_name + '.pyx',
                  blas_name + '.pxd',
-                 blas_fortran_name,
                  blas_header_name,
                  lapack_name + '.pyx',
                  lapack_name + '.pxd',
-                 lapack_fortran_name,
                  lapack_header_name)
     dst_files = (os.path.join(outdir, f) for f in dst_files)
 
@@ -749,7 +693,6 @@ def make_all(outdir,
     ccomment = ''.join(['/* ' + line.rstrip() + ' */\n'
                         for line in comments]) + '\n'
     pyxcomment = ''.join(['# ' + line for line in comments]) + '\n'
-    fcomment = ''.join(['c     ' + line for line in comments]) + '\n'
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
     blas_sigs = filter_lines(blas_sigs)
@@ -761,10 +704,6 @@ def make_all(outdir,
     with open(os.path.join(outdir, blas_name + '.pxd'), 'w') as f:
         f.write(pyxcomment)
         f.write(blas_pxd)
-    blas_fortran = generate_fortran(blas_sigs[0])
-    with open(os.path.join(outdir, blas_fortran_name), 'w') as f:
-        f.write(fcomment)
-        f.write(blas_fortran)
     blas_c_header = generate_c_header(*(blas_sigs + ('BLAS', accelerate)))
     with open(os.path.join(outdir, blas_header_name), 'w') as f:
         f.write(ccomment)
@@ -781,10 +720,6 @@ def make_all(outdir,
     with open(os.path.join(outdir, lapack_name + '.pxd'), 'w') as f:
         f.write(pyxcomment)
         f.write(lapack_pxd)
-    lapack_fortran = generate_fortran(lapack_sigs[0])
-    with open(os.path.join(outdir, lapack_fortran_name), 'w') as f:
-        f.write(fcomment)
-        f.write(lapack_fortran)
     lapack_c_header = generate_c_header(*(lapack_sigs +
                                           ('LAPACK', accelerate)))
     with open(os.path.join(outdir, lapack_header_name), 'w') as f:

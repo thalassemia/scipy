@@ -226,13 +226,15 @@ use_g77_abi = uses_mkl or uses_accelerate or get_option('use-g77-abi')
 if use_g77_abi
   g77_abi_wrappers = static_library(
     'g77_abi_wrappers',
-    '_build_utils/src/wrap_g77_abi.c',
+    ['_build_utils/src/wrap_g77_abi.c',
+    '_build_utils/src/wrap_g77_fortran_intermediate.f'],
     dependencies: [py3_dep, cblas, blas_dep, np_dep],
   )
 else
   g77_abi_wrappers = static_library(
     'dummy_g77_abi_wrappers',
-    '_build_utils/src/wrap_dummy_g77_abi.c',
+    ['_build_utils/src/wrap_dummy_g77_abi.c',
+    '_build_utils/src/wrap_g77_fortran_intermediate.f'],
     dependencies: [py3_dep, blas_dep, np_dep],
   )
 endif

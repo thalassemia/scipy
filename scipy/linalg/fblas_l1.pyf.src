@@ -326,13 +326,12 @@ function ddot(n,x,offx,incx,y,offy,incy) result (xy)
 end function ddot
 
 
-function <prefix2c>dotu(n,x,offx,incx,y,offy,incy) result(xy)
+subroutine <prefix2c>dotu(n,x,offx,incx,y,offy,incy,xy)
 
-  <ftype2c> :: <prefix2c>dotu, xy
-  callstatement <prefix2c>dotu_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
-  callprotoargument F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
-  intent(c) <prefix2c>dotu
-  fortranname F_FUNC(w<prefix2c>dotu, W<C,Z>DOTU)
+  <ftype2c> optional,intent(out) :: xy
+  callstatement (*f2py_func)(&xy,&n,x+offx,&incx,y+offy,&incy)
+  callprotoargument <ctype2c>*,F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
+  fortranname <prefix2c>dotuwrp
 
   <ftype2c> dimension(*),intent(in) :: x
   <ftype2c> dimension(*),intent(in) :: y
@@ -350,16 +349,15 @@ function <prefix2c>dotu(n,x,offx,incx,y,offy,incy) result(xy)
   check(len(x)-offx>(n-1)*abs(incx)) :: n
   check(len(y)-offy>(n-1)*abs(incy)) :: n
 
-end function <prefix2c>dotu
+end subroutine <prefix2c>dotu
 
 
-function <prefix2c>dotc(n,x,offx,incx,y,offy,incy) result(xy)
+subroutine <prefix2c>dotc(n,x,offx,incx,y,offy,incy,xy)
 
-  <ftype2c> :: <prefix2c>dotc, xy
-  callstatement <prefix2c>dotc_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
-  callprotoargument F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
-  intent(c) <prefix2c>dotc
-  fortranname F_FUNC(w<prefix2c>dotc, W<C,Z>DOTC)
+  <ftype2c> optional,intent(out) :: xy
+  callstatement (*f2py_func)(&xy,&n,x+offx,&incx,y+offy,&incy)
+  callprotoargument <ctype2c>*,F_INT*,<ctype2c>*,F_INT*,<ctype2c>*,F_INT*
+  fortranname <prefix2c>dotcwrp
 
   <ftype2c> dimension(*),intent(in) :: x
   <ftype2c> dimension(*),intent(in) :: y
@@ -376,7 +374,7 @@ function <prefix2c>dotc(n,x,offx,incx,y,offy,incy) result(xy)
   check(len(x)-offx>(n-1)*abs(incx)) :: n
   check(len(y)-offy>(n-1)*abs(incy)) :: n
 
-end function <prefix2c>dotc
+end subroutine <prefix2c>dotc
 
 
 function <prefix3>nrm2(n,x,offx,incx) result(n2)
