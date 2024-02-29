@@ -63,7 +63,7 @@ linalg_cython_gen = generator(cython,
 
 # fblas
 fblas_module = custom_target('fblas_module',
-  output: ['_fblasmodule.c', '_fblas-f2pywrappers.f'],
+  output: ['_fblasmodule.c'],
   input: 'fblas.pyf.src',
   command: [generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
 )
@@ -83,7 +83,7 @@ py3.extension_module('_fblas',
 
 # flapack
 flapack_module = custom_target('flapack_module',
-  output: ['_flapackmodule.c', '_flapack-f2pywrappers.f'],
+  output: ['_flapackmodule.c'],
   input: 'flapack.pyf.src',
   command: [generate_f2pymod, '@INPUT@', '-o', '@OUTDIR@']
 )
