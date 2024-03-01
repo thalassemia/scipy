@@ -74,7 +74,6 @@ py3.extension_module('_fblas',
   link_args: version_link_args,
   dependencies: [lapack_dep, blas_dep, fortranobject_dep],
   link_with: [blas_lapack_wrapper_lib, g77_abi_wrappers],
-  override_options: ['b_lto=false'],
   install: true,
   subdir: 'scipy/linalg'
 )
@@ -94,7 +93,6 @@ py3.extension_module('_flapack',
   link_args: version_link_args,
   dependencies: [lapack_dep, blas_dep, fortranobject_dep],
   link_with: [blas_lapack_wrapper_lib, g77_abi_wrappers],
-  override_options: ['b_lto=false'],
   install: true,
   subdir: 'scipy/linalg'
 )
