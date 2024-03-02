@@ -282,7 +282,7 @@ function sdot(n,x,offx,incx,y,offy,incy) result (xy)
   callstatement sdot_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
   callprotoargument F_INT*,float*,F_INT*,float*,F_INT*
   intent(c) sdot
-  fortranname F_FUNC(sdot, SDOT)
+  fortranname F_FUNC(sdot,SDOT)
 
   real dimension(*), intent(in) :: x
   real dimension(*), intent(in) :: y
@@ -307,7 +307,7 @@ function ddot(n,x,offx,incx,y,offy,incy) result (xy)
   callstatement ddot_return_value = (*f2py_func)(&n,x+offx,&incx,y+offy,&incy)
   callprotoargument F_INT*,double*,F_INT*,double*,F_INT*
   intent(c) ddot
-  fortranname F_FUNC(ddot, DDOT)
+  fortranname F_FUNC(ddot,DDOT)
 
   double precision dimension(*), intent(in) :: x
   double precision dimension(*), intent(in) :: y
@@ -384,7 +384,7 @@ function <prefix3>nrm2(n,x,offx,incx) result(n2)
   callstatement <prefix3>nrm2_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype3>*,F_INT*
   intent(c) <prefix3>nrm2
-  fortranname F_FUNC(<prefix3>nrm2, <S,SC>NRM2)
+  fortranname F_FUNC(<prefix3>nrm2,<S,SC>NRM2)
 
   <ftype3> dimension(*),intent(in) :: x
 
@@ -406,7 +406,7 @@ function <prefix4>nrm2(n,x,offx,incx) result(n2)
   callstatement <prefix4>nrm2_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype4>*,F_INT*
   intent(c) <prefix4>nrm2
-  fortranname F_FUNC(<prefix4>nrm2, <D,DZ>NRM2)
+  fortranname F_FUNC(<prefix4>nrm2,<D,DZ>NRM2)
 
   <ftype4> dimension(*),intent(in) :: x
 
@@ -427,7 +427,7 @@ function <prefix3>asum(n,x,offx,incx) result (s)
   callstatement <prefix3>asum_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype3>*,F_INT*
   intent(c) <prefix3>asum
-  fortranname F_FUNC(<prefix3>asum, <S,SC>ASUM)
+  fortranname F_FUNC(<prefix3>asum,<S,SC>ASUM)
 
   <ftype3> dimension(*), intent(in) :: x
   <ftypereal3> <prefix3>asum,s
@@ -446,7 +446,7 @@ function <prefix4>asum(n,x,offx,incx) result (s)
   callstatement <prefix4>asum_return_value = (*f2py_func)(&n,x+offx,&incx)
   callprotoargument F_INT*,<ctype4>*,F_INT*
   intent(c) <prefix4>asum
-  fortranname F_FUNC(<prefix4>asum, <D,DZ>ASUM)
+  fortranname F_FUNC(<prefix4>asum,<D,DZ>ASUM)
 
   <ftype4> dimension(*), intent(in) :: x
   <ftypereal4> <prefix4>asum,s

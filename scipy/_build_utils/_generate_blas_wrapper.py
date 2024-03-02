@@ -49,7 +49,7 @@ def make_c_args(args):
 
 c_func_template = """
 {return_type} {fort_macro}({fort_name})({def_args});
-{return_type} F_FUNC({name}, {upname})({args}){{
+{return_type} F_FUNC({name},{upname})({args}){{
     return {fort_macro}({fort_name})({f_args});
 }}
 """
@@ -77,7 +77,7 @@ def c_func_decl(name, return_type, args, suffix):
 
 c_sub_template = """
 void {fort_macro}({name})({args});
-void F_FUNC({name}, {upname})({args}){{
+void F_FUNC({name},{upname})({args}){{
     {fort_macro}({name})({f_args});
 }}
 """
