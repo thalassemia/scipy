@@ -156,13 +156,13 @@ if host_machine.system() == 'darwin'
   macOS13_3_or_later = sdkVersion.version_compare('>=13.3')
 endif
 
-blas_symbol_suffix = ''
-_args_blas = []
+_args_blas_lapack = []
+accelerate_flag = []
 generate_blas_wrappers = false
 if blas_name == 'accelerate' and macOS13_3_or_later
-  blas_symbol_suffix = '$NEWLAPACK'
-  _args_blas += ['-DACCELERATE_NEW_LAPACK']
+  _args_blas_lapack += ['-DACCELERATE_NEW_LAPACK']
   generate_blas_wrappers = true
+  accelerate_flag = '-a'
 endif
 
 # First try scipy-openblas, and if found don't look for cblas or lapack, we
@@ -183,7 +183,7 @@ elif blas_name != 'scipy-openblas'  # if so, we found it already
 endif
 blas_dep = declare_dependency(
   dependencies: blas,
-  compile_args: _args_blas
+  compile_args: _args_blas_lapack
 )
 if blas_name == 'blas'
   # Netlib BLAS has a separate `libcblas.so` which we use directly in the g77
@@ -207,7 +207,7 @@ else
 endif
 lapack_dep = declare_dependency(
   dependencies: lapack,
-  compile_args: _args_blas
+  compile_args: _args_blas_lapack
 )
 
 dependency_map = {

@@ -3,11 +3,6 @@
 __init__py = fs.copyfile('__init__.py')
 _cy_array_utils_pxd = fs.copyfile('_cythonized_array_utils.pxd')
 
-if blas.name() == 'accelerate'
-  accelerate_flag = '-a'
-else
-  accelerate_flag = []
-endif
 cython_linalg = custom_target('cython_linalg',
   output: [
     'cython_blas.pyx',

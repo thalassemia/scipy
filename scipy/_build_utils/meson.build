@@ -1,4 +1,6 @@
 if generate_blas_wrappers
+  # when we're creating wrapper implementations, meson needs to know about them;
+  # filenames of the wrappers match the function names
   blas_sigs = fs.read('../linalg/cython_blas_signatures.txt').split('\n')
   lapack_sigs = fs.read('../linalg/cython_lapack_signatures.txt').split('\n')
   blas_lapack_names = []
@@ -13,7 +15,7 @@ if generate_blas_wrappers
   blas_wrapper_gen = files('_generate_blas_wrapper.py')
   blas_lapack_wrappers = custom_target('blas_lapack_wrappers',
       output: [blas_lapack_names],
-      command: [py3, blas_wrapper_gen, '-o', '@OUTDIR@', '-s', blas_symbol_suffix],
+      command: [py3, blas_wrapper_gen, '-o', '@OUTDIR@', accelerate_flag],
       depend_files: [
         '../linalg/cython_blas_signatures.txt',
         '../linalg/cython_lapack_signatures.txt',
