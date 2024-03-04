@@ -23,7 +23,7 @@ wrappers for these functions are hard-coded in wrap_g77_abi.c and
 wrap_dummy_g77_abi.c. Second, certain functions are missing from the
 new Accelerate implementation and/or have unusual symbols that require
 special handling in this script.
-"""  
+"""
 import argparse
 import os
 
@@ -85,7 +85,7 @@ wrapped_funcs = ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']
 def create_wrapper(name, return_type, param_list, argnames, accelerate):
     """
     Create the main body of the wrapper file.
-    
+
     Wrapper has symbol `F_FUNC(name,NAME)` and wraps the BLAS/LAPACK function
     `fort_macro(fort_name)` (by default: `BLAS_FUNC(name)`).
     """
@@ -95,9 +95,9 @@ def create_wrapper(name, return_type, param_list, argnames, accelerate):
         return ""
     # Use old Accelerate symbols if missing from new API
     elif accelerate:
+        # Old symbol same as F_FUNC(name,NAME) so no wrapper needed
         if name in ['dcabs1', 'lsame']:
-            fort_macro = ''
-            fort_name += '_'
+            return ""
         elif name == 'xerbla_array':
             fort_macro = ''
             fort_name += '__'
@@ -148,7 +148,7 @@ def generate_c_files(sigs, lib_name, accelerate, outdir):
         preamble.append(lapack_decls)
     preamble.append(cpp_guard_begin)
     for sig in sigs:
-        with open(os.path.join(outdir, f'{sig['name']}.c'), 'w') as f:
+        with open(os.path.join(outdir, f'{sig["name"]}.c'), 'w') as f:
             f.writelines("".join(preamble + [
                 create_wrapper(**sig, accelerate=accelerate), cpp_guard_end]))
 

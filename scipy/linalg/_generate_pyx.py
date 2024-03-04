@@ -525,7 +525,6 @@ def generate_pxd(sigs, lib_name):
 def c_header_decl(name, return_type, argnames, argtypes, accelerate):
     """Create C header declarations for Cython to import."""
     fort_macro = 'BLAS_FUNC'
-    fort_name = name
     return_type = c_types[return_type]
     args = ', '.join(f'{c_types[t]} *{n}' for t, n in zip(argtypes, argnames))
     if name in wrapped_funcs:
@@ -537,10 +536,10 @@ def c_header_decl(name, return_type, argnames, argtypes, accelerate):
     elif accelerate:
         if name in ['dcabs1', 'lsame']:
             fort_macro = ''
-            fort_name += '_'
+            name += '_'
         elif name == 'xerbla_array':
             fort_macro = ''
-            fort_name += '__'
+            name += '__'
     return f"{return_type} {fort_macro}({name})({args});\n"
 
 
