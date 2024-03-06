@@ -5,127 +5,20 @@ from the files "cython_blas_signatures.txt" and
 all the BLAS/LAPACK routines that should be included in the wrappers.
 """
 
-import os
-from stat import ST_MTIME
 import argparse
-
+import os
+import sys
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(BASE_DIR), '_build_utils'))
+from _wrappers_common import (C_PREAMBLE, C_TYPES, CPP_GUARD_BEGIN,
+                              CPP_GUARD_END, LAPACK_DECLS, NPY_TYPES,
+                              WRAPPED_FUNCS, all_newer,
+                              get_blas_macro_and_name, read_signatures,
+                              write_files)
 
-# Used to convert from types in signature files to Fortran types
-fortran_types = {'int': 'integer',
-                 'c': 'complex',
-                 'd': 'double precision',
-                 's': 'real',
-                 'z': 'complex*16',
-                 'char': 'character',
-                 'bint': 'logical'}
-
-# Used to convert from types in signature files to C types
-c_types = {'int': 'int',
-           'c': 'npy_complex64',
-           'd': 'double',
-           's': 'float',
-           'z': 'npy_complex128',
-           'char': 'char',
-           'bint': 'int',
-           'void': 'void',
-           'cselect1': '_cselect1',
-           'cselect2': '_cselect2',
-           'dselect2': '_dselect2',
-           'dselect3': '_dselect3',
-           'sselect2': '_sselect2',
-           'sselect3': '_sselect3',
-           'zselect1': '_zselect1',
-           'zselect2': '_zselect2'}
-
-# Used to convert complex types in signature files to Numpy complex types
-npy_types = {'c': 'npy_complex64', 'z': 'npy_complex128',
-             'cselect1': '_cselect1', 'cselect2': '_cselect2',
-             'dselect2': '_dselect2', 'dselect3': '_dselect3',
-             'sselect2': '_sselect2', 'sselect3': '_sselect3',
-             'zselect1': '_zselect1', 'zselect2': '_zselect2'}
-
-# BLAS/LAPACK functions with complex return values (use 'wrp'-suffixed
-# wrappers from G77 ABI wrapper)
-wrapped_funcs = ['cdotc', 'cdotu', 'zdotc', 'zdotu', 'cladiv', 'zladiv']
-
-
-def read_signatures(lines):
-    """
-    Read BLAS/LAPACK signatures and split into name, return type, C parameter
-    list (e.g. `int* a, bint* b`), and argument names (e.g. `a, b`).
-    """
-    sigs = []
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        line = line[:-1].split('(')
-        args = line[1]
-        name_and_type = line[0].split(' ')
-        ret_type = name_and_type[0]
-        name = name_and_type[1]
-        argtypes, argnames = zip(*[arg.split(' *') for arg in args.split(', ')])
-        # Argname cannot be same as abbreviated return type
-        if ret_type in argnames:
-            argnames = [n if n != ret_type else n + '_' for n in argnames]
-        # Argname should not be Python keyword
-        argnames = [n if n not in ['lambda', 'in'] else n + '_' for n in argnames]
-        sigs.append({
-            'name': name,
-            'return_type': ret_type,
-            'argnames': argnames,
-            'argtypes': argtypes
-        })
-    return sigs
-
-
-def arg_casts(arg):
-    """Cast from Cython to Numpy complex pointer type."""
-    if arg in npy_types.values():
-        return f'<{arg}*>'
-    return ''
-
-
-def pyx_decl(name, return_type, argnames, argtypes, header_name, accelerate):
-    """Create Cython declaration for BLAS/LAPACK function."""
-    args = ', '.join([' *'.join(arg) for arg in zip(argtypes, argnames)])
-    argtypes = [npy_types.get(t, t) for t in argtypes]
-    fort_args = ', '.join([' *'.join(arg) for arg in zip(argtypes, argnames)])
-    argnames = ', '.join([arg_casts(t) + n for n, t in zip(argnames, argtypes)])
-
-    fort_name = name
-    fort_macro = 'BLAS_FUNC'
-    # For functions with complex return type, use 'wrp'-suffixed wrappers
-    if name in wrapped_funcs:
-        # Cast from Cython to Numpy complex types
-        npy_ret_type = npy_types.get(return_type, return_type)
-        return f"""
-cdef extern from "{header_name}":
-    void _fortran_{name} "{name}wrp_"({npy_ret_type} *out, {fort_args}) nogil
-cdef {return_type} {name}({args}) noexcept nogil:
-    cdef {return_type} out
-    _fortran_{name}(<{npy_ret_type}*>&out, {argnames})
-    return out
-"""
-    # Only return if not void function
-    return_kw = 'return ' if return_type != 'void' else ''
-    # Not in new Accelerate (macOS 13.3+) so fallback to old
-    if accelerate:
-        if name in ['lsame', 'dcabs1']:
-            fort_macro = ''
-            fort_name = f'{name}_'
-        elif name == 'xerbla_array':
-            fort_macro = ''
-            fort_name += '__'
-    return f"""
-cdef extern from "{header_name}":
-    {return_type} _fortran_{name} "{fort_macro}({fort_name})"({fort_args}) nogil
-cdef {return_type} {name}({args}) noexcept nogil:
-    {return_kw}_fortran_{name}({argnames})
-"""
-
+COMMENT_TEXT = [f"This file was generated by {os.path.basename(__file__)}.\n",
+                "Do not edit this file directly.\n"]
 
 blas_pyx_preamble = '''# cython: boundscheck = False
 # cython: wraparound = False
@@ -449,18 +342,70 @@ cpdef float complex _test_cladiv(float complex cx, float complex cy) noexcept no
 """
 
 
-def generate_pyx(sigs, header_name, accelerate):
+def arg_casts(argtype):
+    """Cast from Cython to Numpy complex pointer types."""
+    if argtype in NPY_TYPES.values():
+        return f'<{argtype}*>'
+    return ''
+
+
+def generate_decl_pyx(name, return_type, argnames, argtypes, accelerate, header_name):
+    """Create Cython declaration for BLAS/LAPACK function."""
+    pyx_input_args = ', '.join([' *'.join(arg) for arg in zip(argtypes, argnames)])
+    # By default, nothing is returned
+    init_return_var = ''
+    return_kw = ''
+    return_var = ''
+    blas_return_type = 'void'
+    # For functions with complex return type, use 'wrp'-suffixed wrappers
+    # that take a "return" variable as their first argument and return void
+    if name in WRAPPED_FUNCS:
+        init_return_var = f'cdef {return_type} out'
+        argnames = ['out'] + argnames
+        argtypes = [return_type] + argtypes
+        return_var = 'return out'
+    elif return_type != 'void':
+        return_kw = 'return '
+        blas_return_type = return_type
+    c_argtypes = [NPY_TYPES.get(t, t) for t in argtypes]
+    c_proto = ', '.join([' *'.join(arg) for arg in zip(c_argtypes, argnames)])
+    pyx_call_args = [arg_casts(t) + n for n, t in zip(argnames, c_argtypes)]
+    # Use '&' to get pointer of "return" variable for complex-valued functions
+    if name in WRAPPED_FUNCS:
+        pyx_call_args[0] = ''.join([arg_casts(c_argtypes[0]), '&', argnames[0]])
+    pyx_call_args = ', '.join(pyx_call_args)
+    blas_macro, blas_name = get_blas_macro_and_name(name, accelerate)
+    return f"""
+cdef extern from "{header_name}":
+    {blas_return_type} _fortran_{name} "{blas_macro}({blas_name})"({c_proto}) nogil
+cdef {return_type} {name}({pyx_input_args}) noexcept nogil:
+    {init_return_var}
+    {return_kw}_fortran_{name}({pyx_call_args})
+    {return_var}
+"""
+
+
+def generate_file_pyx(sigs, lib_name, header_name, accelerate):
     """Generate pyx file with BLAS/LAPACK func declarations and tests."""
-    decls = "\n".join([
-        pyx_decl(**sig, header_name=header_name, accelerate=accelerate)
-        for sig in sigs])
+    if lib_name == 'BLAS':
+        preamble_template = blas_pyx_preamble
+        epilog = blas_py_wrappers
+    elif lib_name == 'LAPACK':
+        preamble_template = lapack_pyx_preamble
+        epilog = lapack_py_wrappers
+    else:
+        raise RuntimeError(f'Unrecognized lib_name: {lib_name}.')
     names = "\n- ".join([sig['name'] for sig in sigs])
-    if 'blas' in header_name:
-        return blas_pyx_preamble.format(names) + decls + blas_py_wrappers
-    return lapack_pyx_preamble.format(names) + decls + lapack_py_wrappers
+    comment = ['# ' + c for c in COMMENT_TEXT]
+    preamble = comment + [preamble_template.format(names)]
+    decls = [
+        generate_decl_pyx(**sig, accelerate=accelerate, header_name=header_name)
+        for sig in sigs]
+    return ''.join(preamble + decls + [epilog])
 
 
-blas_pxd_preamble = """# Within scipy, these wrappers can be used via relative or absolute cimport.
+blas_pxd_preamble = """
+# Within scipy, these wrappers can be used via relative or absolute cimport.
 # Examples:
 # from ..linalg cimport cython_blas
 # from scipy.linalg cimport cython_blas
@@ -478,7 +423,8 @@ ctypedef double complex z
 
 """
 
-lapack_pxd_preamble = """# Within SciPy, these wrappers can be used via relative or absolute cimport.
+lapack_pxd_preamble = """
+# Within SciPy, these wrappers can be used via relative or absolute cimport.
 # Examples:
 # from ..linalg cimport cython_lapack
 # from scipy.linalg cimport cython_lapack
@@ -508,104 +454,51 @@ ctypedef bint zselect2(z*, z*)
 """
 
 
-def generate_pxd(sigs, lib_name):
-    """Create pxd header file for generated pyx."""
+def generate_decl_pxd(name, return_type, argnames, argtypes):
+    """Create Cython header declaration for BLAS/LAPACK function."""
+    args = ', '.join([' *'.join(arg) for arg in zip(argtypes, argnames)])
+    return f"cdef {return_type} {name}({args}) noexcept nogil\n"
+
+
+def generate_file_pxd(sigs, lib_name):
+    """Create Cython header file for generated pyx."""
     if lib_name == 'BLAS':
-        pxd = [blas_pxd_preamble]
+        preamble = blas_pxd_preamble
+    elif lib_name == 'LAPACK':
+        preamble = lapack_pxd_preamble
     else:
-        pxd = [lapack_pxd_preamble]
-    for sig in sigs:
-        args = ', '.join([
-            ' *'.join(arg) for arg in zip(sig['argtypes'], sig['argnames'])])
-        pxd.append(
-            f"cdef {sig['return_type']} {sig['name']}({args}) noexcept nogil")
-    return '\n'.join(pxd)
+        raise RuntimeError(f'Unrecognized lib_name: {lib_name}.')
+    preamble = ['"""\n', *COMMENT_TEXT, '"""\n', preamble]
+    decls = [generate_decl_pxd(**sig)for sig in sigs]
+    return ''.join(preamble + decls)
 
 
-def c_header_decl(name, return_type, argnames, argtypes, accelerate):
+def generate_decl_c(name, return_type, argnames, argtypes, accelerate):
     """Create C header declarations for Cython to import."""
-    fort_macro = 'BLAS_FUNC'
-    return_type = c_types[return_type]
-    args = ', '.join(f'{c_types[t]} *{n}' for t, n in zip(argtypes, argnames))
-    if name in wrapped_funcs:
-        fort_macro = ''
-        name = f'{name}wrp_'
-        args = f'{return_type} *ret, ' + args
-        return_type = 'void'
-    # Use old Accelerate symbols if missing from new API
-    elif accelerate:
-        if name in ['dcabs1', 'lsame']:
-            fort_macro = ''
-            name += '_'
-        elif name == 'xerbla_array':
-            fort_macro = ''
-            name += '__'
-    return f"{return_type} {fort_macro}({name})({args});\n"
+    c_return_type = C_TYPES[return_type]
+    c_argtypes = [C_TYPES[t] for t in argtypes]
+    # For functions with complex return type, use 'wrp'-suffixed wrappers
+    # that take a "return" variable as their first argument and return void
+    if name in WRAPPED_FUNCS:
+        argnames = ['out'] + argnames
+        c_argtypes = [c_return_type] + c_argtypes
+        c_return_type = 'void'
+    blas_macro, blas_name = get_blas_macro_and_name(name, accelerate)
+    c_args = ', '.join(f'{t} *{n}' for t, n in zip(c_argtypes, argnames))
+    return f"{c_return_type} {blas_macro}({blas_name})({c_args});\n"
 
 
-c_preamble = """#ifndef SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
-#define SCIPY_LINALG_{lib}_FORTRAN_WRAPPERS_H
-#include "fortran_defs.h"
-#include "npy_cblas.h"
-"""
-
-lapack_decls = """
-typedef int (*_cselect1)(npy_complex64*);
-typedef int (*_cselect2)(npy_complex64*, npy_complex64*);
-typedef int (*_dselect2)(double*, double*);
-typedef int (*_dselect3)(double*, double*, double*);
-typedef int (*_sselect2)(float*, float*);
-typedef int (*_sselect3)(float*, float*, float*);
-typedef int (*_zselect1)(npy_complex128*);
-typedef int (*_zselect2)(npy_complex128*, npy_complex128*);
-"""
-
-cpp_guard_begin = """
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-"""
-
-cpp_guard_end = """
-#ifdef __cplusplus
-}
-#endif
-#endif
-"""
-
-
-def generate_c_header(sigs, lib_name, accelerate):
-    """Generate complete C header file with declarations and includes."""
-    header = [c_preamble.format(lib=lib_name)]
-    if lib_name == 'LAPACK':
-        header.append(lapack_decls)
-    header.append(cpp_guard_begin)
-    header += [c_header_decl(**sig, accelerate=accelerate) for sig in sigs]
-    header.append(cpp_guard_end)
-    return "".join(header)
-
-
-def newer(source, target):
-    """
-    Return true if 'source' exists and is more recently modified than
-    'target', or if 'source' exists and 'target' doesn't.  Return false if
-    both exist and 'target' is the same age or younger than 'source'.
-    """
-    if not os.path.exists(source):
-        raise ValueError("file '%s' does not exist" % os.path.abspath(source))
-    if not os.path.exists(target):
-        return 1
-
-    mtime1 = os.stat(source)[ST_MTIME]
-    mtime2 = os.stat(target)[ST_MTIME]
-
-    return mtime1 > mtime2
-
-
-def all_newer(src_files, dst_files):
-    return all(os.path.exists(dst) and newer(dst, src)
-               for dst in dst_files for src in src_files)
+def generate_file_c(sigs, lib_name, accelerate):
+    """Generate complete C header file for Cython to import."""
+    if lib_name == 'BLAS':
+        preamble = [C_PREAMBLE]
+    elif lib_name == 'LAPACK':
+        preamble = [C_PREAMBLE, LAPACK_DECLS]
+    else:
+        raise RuntimeError(f'Unrecognized lib_name: {lib_name}.')
+    preamble = ['/*\n', *COMMENT_TEXT, '*/\n'] + preamble + [CPP_GUARD_BEGIN]
+    decls = [generate_decl_c(**sig, accelerate=accelerate) for sig in sigs]
+    return ''.join(preamble + decls + [CPP_GUARD_END])
 
 
 def make_all(outdir,
@@ -616,7 +509,6 @@ def make_all(outdir,
              blas_header_name="_blas_subroutines.h",
              lapack_header_name="_lapack_subroutines.h",
              accelerate=False):
-
     src_files = (os.path.abspath(__file__),
                  blas_signature_file,
                  lapack_signature_file)
@@ -626,51 +518,28 @@ def make_all(outdir,
                  lapack_name + '.pyx',
                  lapack_name + '.pxd',
                  lapack_header_name)
-    dst_files = (os.path.join(outdir, f) for f in dst_files)
-
+    dst_files = [os.path.join(outdir, f) for f in dst_files]
     os.chdir(BASE_DIR)
-
-    if all_newer(src_files, dst_files):
+    if all_newer(dst_files, src_files):
         print("scipy/linalg/_generate_pyx.py: all files up-to-date")
         return
-
-    comments = ["This file was generated by _generate_pyx.py.\n",
-                "Do not edit this file directly.\n"]
-    ccomment = ''.join(['/* ' + line.rstrip() + ' */\n'
-                        for line in comments]) + '\n'
-    pyxcomment = ''.join(['# ' + line for line in comments]) + '\n'
-
     with open(blas_signature_file) as f:
         blas_sigs = f.readlines()
     blas_sigs = read_signatures(blas_sigs)
-    blas_pyx = generate_pyx(blas_sigs, blas_header_name, accelerate)
-    with open(os.path.join(outdir, blas_name + '.pyx'), 'w') as f:
-        f.write(pyxcomment)
-        f.write(blas_pyx)
-    blas_pxd = generate_pxd(blas_sigs, 'BLAS')
-    with open(os.path.join(outdir, blas_name + '.pxd'), 'w') as f:
-        f.write(pyxcomment)
-        f.write(blas_pxd)
-    blas_c_header = generate_c_header(blas_sigs, 'BLAS', accelerate)
-    with open(os.path.join(outdir, blas_header_name), 'w') as f:
-        f.write(ccomment)
-        f.write(blas_c_header)
-
     with open(lapack_signature_file) as f:
         lapack_sigs = f.readlines()
     lapack_sigs = read_signatures(lapack_sigs)
-    lapack_pyx = generate_pyx(lapack_sigs, lapack_header_name, accelerate)
-    with open(os.path.join(outdir, lapack_name + '.pyx'), 'w') as f:
-        f.write(pyxcomment)
-        f.write(lapack_pyx)
-    lapack_pxd = generate_pxd(lapack_sigs, 'LAPACK')
-    with open(os.path.join(outdir, lapack_name + '.pxd'), 'w') as f:
-        f.write(pyxcomment)
-        f.write(lapack_pxd)
-    lapack_c_header = generate_c_header(lapack_sigs, 'LAPACK', accelerate)
-    with open(os.path.join(outdir, lapack_header_name), 'w') as f:
-        f.write(ccomment)
-        f.write(lapack_c_header)
+    to_write = {
+        dst_files[0]: generate_file_pyx(
+            blas_sigs, 'BLAS', blas_header_name, accelerate),
+        dst_files[1]: generate_file_pxd(blas_sigs, 'BLAS'),
+        dst_files[2]: generate_file_c(blas_sigs, 'BLAS', accelerate),
+        dst_files[3]: generate_file_pyx(
+            lapack_sigs, 'LAPACK', lapack_header_name, accelerate),
+        dst_files[4]: generate_file_pxd(lapack_sigs, 'LAPACK'),
+        dst_files[5]: generate_file_c(lapack_sigs, 'LAPACK', accelerate)
+    }
+    write_files(to_write)
 
 
 if __name__ == '__main__':
