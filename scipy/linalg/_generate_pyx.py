@@ -3,6 +3,8 @@ Code generator script to make the Cython BLAS and LAPACK wrappers
 from the files "cython_blas_signatures.txt" and
 "cython_lapack_signatures.txt" which contain the signatures for
 all the BLAS/LAPACK routines that should be included in the wrappers.
+
+NOTE: Must add scipy/_build_utils to PYTHONPATH for _wrappers_common
 """
 
 import argparse
