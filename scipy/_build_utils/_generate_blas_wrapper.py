@@ -27,9 +27,10 @@ special handling in this script.
 import argparse
 import os
 
-from _wrappers_common import (C_TYPES, WRAPPED_FUNCS, all_newer,
-                              get_blas_macro_and_name, read_signatures,
-                              write_files, C_PREAMBLE, LAPACK_DECLS, CPP_GUARD_BEGIN, CPP_GUARD_END)
+from _wrappers_common import (C_PREAMBLE, C_TYPES, CPP_GUARD_BEGIN,
+                              CPP_GUARD_END, LAPACK_DECLS, WRAPPED_FUNCS,
+                              all_newer, get_blas_macro_and_name,
+                              read_signatures, write_files)
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 LINALG_DIR = os.path.abspath(os.path.join(CURR_DIR, "..", "linalg"))
