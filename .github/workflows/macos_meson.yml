@@ -23,7 +23,7 @@ concurrency:
 jobs:
   test_meson_accelerate:
     name: Meson build (Accelerate)
-    runs-on: macos-latest
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: ["3.11"]
