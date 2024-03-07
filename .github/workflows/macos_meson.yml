@@ -67,12 +67,10 @@ jobs:
       # according to the GitHub Action Docs.
       with:
         path: ${{ steps.prep-ccache.outputs.dir }}
-        key:  ${{ github.workflow }}-${{ matrix.python-version }}-ccache-macos-${{ steps.prep-ccache.outputs.timestamp }}
-        # This evaluates to `macOS Tests-3.10-ccache-macos-` which is not
-        # unique. As the CI matrix is expanded, this will need to be updated to
-        # be unique so that the cache is not restored from a different job altogether.
+        key:  ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-${{ steps.prep-ccache.outputs.timestamp }}
+        # This evaluates to `macOS tests-Meson build-3.10-ccache-macos-`
         restore-keys: |
-          ${{ github.workflow }}-${{ matrix.python-version }}-ccache-macos-
+          ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v2
@@ -99,7 +97,7 @@ jobs:
       with:
         path: ${{ env.CONDA }}/envs/scipy-dev
         key:
-          ${{ runner.os }}--${{ steps.get-date.outputs.today }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+          ${{ runner.os }}-${{ github.job }}-${{ steps.get-date.outputs.today }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       id: envcache
 
     - name: Update Conda Environment
@@ -177,12 +175,10 @@ jobs:
       # according to the GitHub Action Docs.
       with:
         path: ${{ steps.prep-ccache.outputs.dir }}
-        key:  ${{ github.workflow }}-${{ matrix.python-version }}-ccache-macos-${{ steps.prep-ccache.outputs.timestamp }}
-        # This evaluates to `macOS Tests-3.10-ccache-macos-` which is not
-        # unique. As the CI matrix is expanded, this will need to be updated to
-        # be unique so that the cache is not restored from a different job altogether.
+        key:  ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-${{ steps.prep-ccache.outputs.timestamp }}
+        # This evaluates to `macOS Tests-Meson build (Accelerate)-3.10-ccache-macos-`
         restore-keys: |
-          ${{ github.workflow }}-${{ matrix.python-version }}-ccache-macos-
+          ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v2
@@ -201,6 +197,14 @@ jobs:
       run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
       shell: bash
 
+    - name: Get latest compilers
+      # Instead of `compilers` metapackage, get latest `gfortran`
+      # `pythran` will ensure latest `clang` is installed
+      run: |
+        # `compilers` too old, get newest `gfortran` instead
+        # `pythran` will install newest `clang`
+        sed -i -e 's/compilers/gfortran/g' environment.yml
+
     - name: Cache conda
       uses: actions/cache@v3
       env:
@@ -209,7 +213,7 @@ jobs:
       with:
         path: ${{ env.CONDA }}/envs/scipy-dev
         key:
-          ${{ runner.os }}--${{ steps.get-date.outputs.today }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+          ${{ runner.os }}-${{ github.job }}-${{ steps.get-date.outputs.today }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       id: envcache
 
     - name: Update Conda Environment
