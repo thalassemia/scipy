@@ -99,7 +99,7 @@ def make_all(outdir,
                  lapack_signature_file)
     dst_files = [os.path.join(outdir, f'{sig["name"]}.c')
                  for sig in blas_sigs + lapack_sigs]
-    if all_newer(src_files, dst_files):
+    if all_newer(dst_files, src_files):
         print("scipy/linalg/_generate_blas_wrapper.py: all files up-to-date")
         return
     blas_wrappers = generate_file_wrapper(
