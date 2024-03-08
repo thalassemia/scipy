@@ -13,6 +13,7 @@ from numpy.testing import (assert_array_almost_equal, assert_allclose, assert_,
                            assert_array_less, assert_array_equal, assert_warns)
 import pytest
 
+from scipy import show_config
 import scipy.linalg
 from scipy.linalg import (funm, signm, logm, sqrtm, fractional_matrix_power,
                           expm, expm_frechet, expm_cond, norm, khatri_rao)
@@ -21,6 +22,8 @@ import scipy.linalg._expm_frechet
 
 from scipy.optimize import minimize
 
+BLAS_NAME = show_config('dicts')['Build Dependencies']['blas']['name']
+LAPACK_NAME = show_config('dicts')['Build Dependencies']['lapack']['name']
 
 def _get_al_mohy_higham_2012_experiment_1():
     """
@@ -416,6 +419,9 @@ class TestSqrtM:
         assert_allclose(np.dot(R, R), M, atol=1e-14)
         assert_allclose(sqrtm(M), R, atol=1e-14)
 
+    @pytest.mark.xfail(BLAS_NAME == 'accelerate' or LAPACK_NAME == 'accelerate',
+                       reason='macOS Accelerate floating-point error breaks '
+                       'logic keeping sqrtm real.')
     def test_gh17918(self):
         M = np.empty((19, 19))
         M.fill(0.94)
