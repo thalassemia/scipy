@@ -68,7 +68,7 @@ jobs:
       with:
         path: ${{ steps.prep-ccache.outputs.dir }}
         key:  ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-${{ steps.prep-ccache.outputs.timestamp }}
-        # This evaluates to `macOS tests-Meson build-3.10-ccache-macos-`
+        # This evaluates to `macOS tests (meson)-test_meson-3.10-ccache-macos-`
         restore-keys: |
           ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-
 
@@ -222,12 +222,12 @@ jobs:
       with:
         path: ${{ steps.prep-ccache.outputs.dir }}
         key:  ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-${{ steps.prep-ccache.outputs.timestamp }}
-        # This evaluates to `macOS Tests-Meson build (Accelerate)-3.10-ccache-macos-`
+        # This evaluates to `macOS tests (meson)-test_meson_accelerate-3.10-ccache-macos-`
         restore-keys: |
           ${{ github.workflow }}-${{ github.job }}-${{ matrix.python-version }}-ccache-macos-
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         python-version: ${{ matrix.python-version }}
         channels: conda-forge
@@ -237,6 +237,7 @@ jobs:
         miniforge-variant: Mambaforge
         miniforge-version: latest
         use-mamba: true
+        architecture: ${{ runner.arch }}
 
     - name: Get Date
       id: get-date
@@ -259,7 +260,7 @@ jobs:
       with:
         path: ${{ env.CONDA }}/envs/scipy-dev
         key:
-          ${{ runner.os }}-${{ github.job }}-${{ steps.get-date.outputs.today }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
+          ${{ runner.os }}-${{ runner.arch }}-${{ steps.get-date.outputs.today }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles('environment.yml') }}
       id: envcache
 
     - name: Update Conda Environment
