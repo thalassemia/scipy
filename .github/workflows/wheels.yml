@@ -59,7 +59,9 @@ jobs:
           echo github.ref ${{ github.ref }}
 
   build_wheels:
-    name: Build wheel for ${{ matrix.python[0] }}-${{ matrix.buildplat[1] }} ${{ matrix.buildplat[2] }}
+    name: Wheel, ${{ matrix.python[0] }}-${{ matrix.buildplat[1] }}
+      ${{ matrix.buildplat[2] }} ${{ matrix.buildplat[3] }}
+      ${{ matrix.buildplat[4] }}
     needs: get_commit_message
     if: >-
       contains(needs.get_commit_message.outputs.message, '1') ||
@@ -77,11 +79,15 @@ jobs:
         # should also be able to do multi-archs on a single entry, e.g.
         # [windows-2019, win*, "AMD64 x86"]. However, those two require a different compiler setup
         # so easier to separate out here.
-        - [ubuntu-22.04, manylinux, x86_64]
-        - [ubuntu-22.04, musllinux, x86_64]
-        - [macos-11, macosx, x86_64]
-        - [macos-14, macosx, arm64]
-        - [windows-2019, win, AMD64]
+        - [ubuntu-22.04, manylinux, x86_64, "", ""]
+        - [ubuntu-22.04, musllinux, x86_64, "", ""]
+        - [macos-13, macosx, x86_64, openblas, "10.9"]
+        - [macos-13, macosx, x86_64, accelerate, "14.0"]
+        # Target 12.2 to match gfortran, resulting wheel can
+        # be pip installed on any macOS >= 12
+        - [macos-14, macosx, arm64, openblas, "12.2"]
+        - [macos-14, macosx, arm64, accelerate, "14.0"]
+        - [windows-2019, win, AMD64, "", ""]
 
         python: [["cp310", "3.10"], ["cp311", "3.11"], ["cp312", "3.12"]]
         # python[0] is used to specify the python versions made by cibuildwheel
@@ -112,63 +118,44 @@ jobs:
         if: ${{ runner.os == 'Windows' && env.IS_32_BIT == 'false' }}
 
       - name: Setup macOS
-        if: matrix.buildplat[0] == 'macos-11' || matrix.buildplat[0] == 'macos-14'
+        if: startsWith( matrix.buildplat[0], 'macos-' )
         run: |
-          if [[ ${{ matrix.buildplat[2] }} == 'arm64' ]]; then
-            # macosx_arm64
-          
-            # use homebrew gfortran
-            sudo xcode-select -s /Applications/Xcode_15.2.app            
-            # for some reason gfortran is not on the path
-            GFORTRAN_LOC=$(brew --prefix gfortran)/bin/gfortran 
-            ln -s $GFORTRAN_LOC gfortran
-            export PATH=$PWD:$PATH
-            echo "PATH=$PATH" >> "$GITHUB_ENV"
-          
-            # location of the gfortran's libraries
-            GFORTRAN_LIB=$(dirname `gfortran --print-file-name libgfortran.dylib`)
-
-            CIBW="MACOSX_DEPLOYMENT_TARGET=12.0\
-              MACOS_DEPLOYMENT_TARGET=12.0\
-              LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH\
-              _PYTHON_HOST_PLATFORM=macosx-12.0-arm64\
-              PIP_PRE=1\
-              PIP_NO_BUILD_ISOLATION=false\
-              PKG_CONFIG_PATH=/opt/arm64-builds/lib/pkgconfig\
-              PIP_EXTRA_INDEX_URL=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple"
-            echo "CIBW_ENVIRONMENT_MACOS=$CIBW" >> "$GITHUB_ENV"
-          
-            CIBW="sudo xcode-select -s /Applications/Xcode_15.2.app"
-            echo "CIBW_BEFORE_ALL=$CIBW" >> $GITHUB_ENV
-
-            echo "REPAIR_PATH=/opt/arm64-builds/lib" >> "$GITHUB_ENV"
-
-            CIBW="DYLD_LIBRARY_PATH=$GFORTRAN_LIB:/opt/arm64-builds/lib delocate-listdeps {wheel} &&\
-              DYLD_LIBRARY_PATH=$GFORTRAN_LIB:/opt/arm64-builds/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}"
-            echo "CIBW_REPAIR_WHEEL_COMMAND_MACOS=$CIBW" >> "$GITHUB_ENV"
-      
-          else
-            # macosx_x86_64 with OpenBLAS
-            # setting SDKROOT necessary when using the gfortran compiler
-            # installed in cibw_before_build_macos.sh
-            # MACOS_DEPLOYMENT_TARGET is set because of
-            # https://github.com/mesonbuild/meson-python/pull/309. Once
-            # an update is released, then that environment variable can
-            # be removed.
-            CIBW="MACOSX_DEPLOYMENT_TARGET=10.9\
-              MACOS_DEPLOYMENT_TARGET=10.9\
-              SDKROOT=/Applications/Xcode_11.7.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk\
-              LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH\
-              _PYTHON_HOST_PLATFORM=macosx-10.9-x86_64\
-              PIP_PRE=1\
-              PIP_NO_BUILD_ISOLATION=false\
-              PIP_EXTRA_INDEX_URL=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple"
-            echo "CIBW_ENVIRONMENT_MACOS=$CIBW" >> "$GITHUB_ENV"  
-          
-            CIBW="DYLD_LIBRARY_PATH=/usr/local/lib delocate-listdeps {wheel} &&\
-              DYLD_LIBRARY_PATH=/usr/local/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}"
-            echo "CIBW_REPAIR_WHEEL_COMMAND_MACOS=$CIBW" >> "$GITHUB_ENV"
+          if [[ ${{ matrix.buildplat[3] }} == 'accelerate' ]]; then
+            echo CIBW_CONFIG_SETTINGS=\"setup-args=-Dblas=accelerate\" >> "$GITHUB_ENV"
           fi
+          if [[ ${{ matrix.buildplat[2] }} == 'arm64' ]]; then
+            LIB_PATH=/opt/arm64-builds/lib
+          else
+            if [[ ${{ matrix.buildplat[3] }} == 'accelerate' ]]; then
+              if [[ ${{ matrix.buildplat[4] }} == 14.0 ]]; then
+                # the macos-13 image that's used for building the x86_64 wheel
+                # can't test a wheel with deployment target >= 14
+                echo "CIBW_TEST_SKIP=*-macosx_x86_64" >> "$GITHUB_ENV"
+              fi
+            fi
+            LIB_PATH=/usr/local/lib
+          fi
+          CIBW="sudo xcode-select -s /Applications/Xcode_15.2.app"
+          echo "CIBW_BEFORE_ALL=$CIBW" >> $GITHUB_ENV
+          # setting SDKROOT necessary when using the gfortran compiler
+          # installed in cibw_before_build_macos.sh
+          sudo xcode-select -s /Applications/Xcode_15.2.app
+          CIBW="MACOSX_DEPLOYMENT_TARGET=${{ matrix.buildplat[4] }}\
+            LD_LIBRARY_PATH=$LIB_PATH:$LD_LIBRARY_PATH\
+            SDKROOT=$(xcrun --sdk macosx --show-sdk-path)\
+            PIP_PRE=1\
+            PIP_NO_BUILD_ISOLATION=false\
+            PKG_CONFIG_PATH=$LIB_PATH/pkgconfig\
+            PIP_EXTRA_INDEX_URL=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple"
+          echo "CIBW_ENVIRONMENT_MACOS=$CIBW" >> "$GITHUB_ENV"
+
+          echo "REPAIR_PATH=$LIB_PATH" >> "$GITHUB_ENV"
+          
+          GFORTRAN_LIB="\$(dirname \$(gfortran --print-file-name libgfortran.dylib))"
+          CIBW="DYLD_LIBRARY_PATH=$GFORTRAN_LIB:$LIB_PATH delocate-listdeps {wheel} &&\
+            DYLD_LIBRARY_PATH=$GFORTRAN_LIB:$LIB_PATH delocate-wheel --require-archs \
+            {delocate_archs} -w {dest_dir} {wheel}"
+          echo "CIBW_REPAIR_WHEEL_COMMAND_MACOS=$CIBW" >> "$GITHUB_ENV"
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.17.0
@@ -198,7 +185,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: ${{ matrix.python[0] }}-${{ matrix.buildplat[1] }}-${{ matrix.buildplat[2] }}
+          name: ${{ matrix.python[0] }}-${{ matrix.buildplat[1] }}
+            ${{ matrix.buildplat[2] }} ${{ matrix.buildplat[3] }}
+            ${{ matrix.buildplat[4] }}
 
       - uses: conda-incubator/setup-miniconda@v3
         with:
@@ -209,9 +198,10 @@ jobs:
           # build and test the wheel
           auto-update-conda: true
           python-version: "3.10"
+          miniconda-version: "latest"
 
       - name: Upload wheels
-        if: success()
+        if: success() && !( matrix.buildplat[3] == 'accelerate' && matrix.buildplat[4] == 13.0 )
         shell: bash -el {0}
         # see https://github.com/marketplace/actions/setup-miniconda for why
         # `-el {0}` is required.
