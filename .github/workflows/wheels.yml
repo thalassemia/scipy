@@ -82,9 +82,6 @@ jobs:
         - [ubuntu-22.04, manylinux, x86_64, "", ""]
         - [ubuntu-22.04, musllinux, x86_64, "", ""]
         - [macos-13, macosx, x86_64, openblas, "10.9"]
-        # Build x86 Accelerate wheel targeting macOS 13 just for testing
-        - [macos-13, macosx, x86_64, accelerate, "13.0"]
-        # Build x86 Accelerate wheel targeting macOS 14 to release
         - [macos-13, macosx, x86_64, accelerate, "14.0"]
         - [macos-14, macosx, arm64, openblas, "12.0"]
         - [macos-14, macosx, arm64, accelerate, "14.0"]
@@ -127,23 +124,15 @@ jobs:
           export PATH=$PWD:$PATH
           echo "PATH=$PATH" >> "$GITHUB_ENV"
           GFORTRAN_LIB=$(dirname `gfortran --print-file-name libgfortran.dylib`)
-          MACOSX_TARGET=${{ matrix.buildplat[4] }}
           if [[ ${{ matrix.buildplat[3] }} == 'accelerate' ]]; then
             echo CIBW_CONFIG_SETTINGS=\"setup-args=-Dblas=accelerate\" >> "$GITHUB_ENV"
           fi
           if [[ ${{ matrix.buildplat[2] }} == 'arm64' ]]; then
             LIB_PATH=/opt/arm64-builds/lib
           else
-            if [[ ${{ matrix.buildplat[3] }} == 'accelerate' ]]; then
-              if [[ ${{ matrix.buildplat[4] }} == 14.0 ]]; then
-                # the macos-13 image that's used for building the x86_64 wheel
-                # can't test a wheel with deployment target >= 14
-                echo "CIBW_TEST_SKIP=*-macosx_x86_64" >> "$GITHUB_ENV"
-              fi
-            fi
             LIB_PATH=/usr/local/lib
           fi
-          CIBW="MACOSX_DEPLOYMENT_TARGET=$MACOSX_TARGET\
+          CIBW="MACOSX_DEPLOYMENT_TARGET=${{ matrix.buildplat[4] }}\
             LD_LIBRARY_PATH=$LIB_PATH:$LD_LIBRARY_PATH\
             PIP_PRE=1\
             PIP_NO_BUILD_ISOLATION=false\
@@ -159,6 +148,10 @@ jobs:
           CIBW="DYLD_LIBRARY_PATH=$GFORTRAN_LIB:$LIB_PATH delocate-listdeps {wheel} &&\
             DYLD_LIBRARY_PATH=$GFORTRAN_LIB:$LIB_PATH delocate-wheel --require-archs \
             {delocate_archs} -w {dest_dir} {wheel}"
+          if [[ ${{ matrix.buildplat[0] }} == 'macos-13' && ${{ matrix.buildplat[4] }} == '14.0' ]]; then
+            CIBW+=" && mv {dest_dir}/\$(basename {wheel}) \
+              {dest_dir}/\$(echo \$(basename {wheel}) | sed 's/14_0/13_0/')"
+          fi
           echo "CIBW_REPAIR_WHEEL_COMMAND_MACOS=$CIBW" >> "$GITHUB_ENV"
 
       - name: Build wheels
@@ -186,6 +179,12 @@ jobs:
             PIP_EXTRA_INDEX_URL=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple
             PIP_NO_BUILD_ISOLATION=false
 
+      - name: Rename after test (macOS x86 Accelerate only)
+        # Rename x86 Accelerate wheel back so it targets macOS >= 14
+        if: matrix.buildplat[0] == 'macos-13' && matrix.buildplat[4] == '14.0'
+        run: |
+          mv ./wheelhouse/*.whl $(find ./wheelhouse -type f -name '*.whl' | sed 's/13_0/14_0/')
+
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
@@ -205,7 +204,7 @@ jobs:
           miniconda-version: "latest"
 
       - name: Upload wheels
-        if: success() && !( matrix.buildplat[3] == 'accelerate' && matrix.buildplat[4] == 13.0 )
+        if: success()
         shell: bash -el {0}
         # see https://github.com/marketplace/actions/setup-miniconda for why
         # `-el {0}` is required.
