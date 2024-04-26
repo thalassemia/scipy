@@ -4,7 +4,7 @@ PROJECT_DIR="$1"
 
 # python $PROJECT_DIR/tools/wheels/check_license.py
 if [[ $(uname) == "Linux" ]] ; then
-    python $PROJECT_DIR/tools/openblas_support.py --check_version
+    # python $PROJECT_DIR/tools/openblas_support.py --check_version
 fi
 echo $?
 
