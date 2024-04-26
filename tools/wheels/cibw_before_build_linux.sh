@@ -1,25 +1,26 @@
 set -xe
 
 
-NIGHTLY_FLAG=""
-
-if [ "$#" -eq 1 ]; then
-    PROJECT_DIR="$1"
-elif [ "$#" -eq 2 ] && [ "$1" = "--nightly" ]; then
-    NIGHTLY_FLAG="--nightly"
-    PROJECT_DIR="$2"
-else
-    echo "Usage: $0 [--nightly] <project_dir>"
-    exit 1
-fi
-
-PLATFORM=$(PYTHONPATH=tools python -c "import openblas_support; print(openblas_support.get_plat())")
-
 printenv
 # Update license
 cat $PROJECT_DIR/tools/wheels/LICENSE_linux.txt >> $PROJECT_DIR/LICENSE.txt
 
 # Install Openblas
-basedir=$(python tools/openblas_support.py $NIGHTLY_FLAG)
-cp -r $basedir/lib/* /usr/local/lib
-cp $basedir/include/* /usr/local/include
+echo PKG_CONFIG_PATH $PKG_CONFIG_PATH
+PKG_CONFIG_PATH=$PROJECT_DIR/.openblas
+rm -rf $PKG_CONFIG_PATH
+mkdir -p $PKG_CONFIG_PATH
+python -c "import scipy_openblas32; print(scipy_openblas32.get_pkg_config())" > $PKG_CONFIG_PATH/scipy-openblas.pc
+# Copy the shared objects to a path under $PKG_CONFIG_PATH, the build
+# will point $LD_LIBRARY_PATH there and then auditwheel/delocate-wheel will
+# pull these into the wheel. Use python to avoid windows/posix problems
+python <<EOF
+import os, scipy_openblas32, shutil
+srcdir = os.path.join(os.path.dirname(scipy_openblas32.__file__), "lib")
+shutil.copytree(srcdir, os.path.join("$PKG_CONFIG_PATH", "lib"))
+srcdir = os.path.join(os.path.dirname(scipy_openblas32.__file__), ".dylibs")
+if os.path.exists(srcdir):  # macosx delocate
+    shutil.copytree(srcdir, os.path.join("$PKG_CONFIG_PATH", ".dylibs"))
+EOF
+
+
