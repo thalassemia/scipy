@@ -84,5 +84,4 @@ jobs:
         source test_env/bin/activate
         cd $GITHUB_WORKSPACE
         export PKG_CONFIG_PATH=$PWD/.openblas
-        export LD_LIBRARY_PATH=$PWD/.openblas/lib:$LD_LIBRARY_PATH
         python dev.py test
