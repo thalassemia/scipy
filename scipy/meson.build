@@ -206,6 +206,7 @@ if blas_name == 'openblas' or blas_name == 'auto'
   blas = dependency('scipy-openblas', method: 'pkg-config', required: false)
   if blas.found()
     blas_name = 'scipy-openblas'
+    generate_blas_wrappers = true
   endif
 endif
 
