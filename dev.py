@@ -494,7 +494,7 @@ class Build(Task):
         elif args.with_scipy_openblas:
             cls.configure_scipy_openblas()
             env['PKG_CONFIG_PATH'] = os.pathsep.join([
-                    os.path.join(os.getcwd(), '.openblas'),
+                    os.getcwd(),
                     env.get('PKG_CONFIG_PATH', '')
                     ])
 
@@ -602,12 +602,11 @@ class Build(Task):
 
     @classmethod
     def configure_scipy_openblas(self, blas_variant='32'):
-        """Create .openblas/scipy-openblas.pc and scipy/_distributor_init_local.py
+        """Create scipy-openblas.pc and scipy/_distributor_init_local.py
 
         Requires a pre-installed scipy-openblas32 wheel from PyPI.
         """
-        basedir = os.getcwd()
-        openblas_dir = os.path.join(basedir, ".openblas")
+        openblas_dir = os.getcwd()
         pkg_config_fname = os.path.join(openblas_dir, "scipy-openblas.pc")
 
         if os.path.exists(pkg_config_fname):

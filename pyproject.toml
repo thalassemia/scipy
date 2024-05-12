@@ -145,25 +145,17 @@ before-build = "bash {project}/tools/wheels/cibw_before_build_linux.sh {project}
 # RUNNER_OS is a GitHub Actions specific env var; define it here so it works on Cirrus CI too
 RUNNER_OS="Linux"
 # /project will be the $PWD equivalent inside the docker used to build the wheel
-PKG_CONFIG_PATH="/project/.openblas"
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/project/.openblas/lib"
+PKG_CONFIG_PATH="/project/
 
 [tool.cibuildwheel.macos]
-before-build = "bash {project}/tools/wheels/cibw_before_build_macos.sh {project}"
+before-build = "pip install ninja; bash {project}/tools/wheels/cibw_before_build_macos.sh {project}"
+
+[tool.cibuildwheel.macos.environment]
+PKG_CONFIG_PATH="{project}"
 
 [tool.cibuildwheel.windows]
-before-build = "bash {project}/tools/wheels/cibw_before_build_win.sh {project}"
+before-build = "pip install ninja && bash {project}/tools/wheels/cibw_before_build_win.sh {project}"
 repair-wheel-command = "bash ./tools/wheels/repair_windows.sh {wheel} {dest_dir}"
 
-[[tool.cibuildwheel.overrides]]
-select = "*-win32"
-
-[[tool.cibuildwheel.overrides]]
-select = "*-win_amd64"
-# can use pkg-config detection for win_amd64 because the installed rtools
-# provide a working pkg-config.
-# An alternative is to set CMAKE_PREFIX_PATH="c:/opt/openblas/if_32/32"
-# Don't use double backslash for path separators, they don't get passed
-# to the build correctly
-# environment = { CMAKE_PREFIX_PATH="c:/opt/64" }
-environment = { PKG_CONFIG_PATH = "c:/opt/64/lib/pkgconfig" }
+[tool.cibuildwheel.windows.environment]
+PKG_CONFIG_PATH="{project}"

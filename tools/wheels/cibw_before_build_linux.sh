@@ -18,8 +18,5 @@ printenv
 cat $PROJECT_DIR/tools/wheels/LICENSE_linux.txt >> $PROJECT_DIR/LICENSE.txt
 
 # Install Openblas
-echo PKG_CONFIG_PATH $PKG_CONFIG_PATH
-PKG_CONFIG_PATH=$PROJECT_DIR/.openblas
-rm -rf $PKG_CONFIG_PATH
-mkdir -p $PKG_CONFIG_PATH
-python -c "import scipy_openblas32; print(scipy_openblas32.get_pkg_config())" > $PKG_CONFIG_PATH/scipy-openblas.pc
+python -m pip install -r requirements/openblas.txt
+python -c "import scipy_openblas32; print(scipy_openblas32.get_pkg_config())" > $PROJECT_DIR/scipy-openblas.pc

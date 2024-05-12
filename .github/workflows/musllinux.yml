@@ -83,5 +83,5 @@ jobs:
         cd $RUNNER_TEMP
         source test_env/bin/activate
         cd $GITHUB_WORKSPACE
-        export PKG_CONFIG_PATH=$PWD/.openblas
+        export PKG_CONFIG_PATH=$PWD
         python dev.py test
