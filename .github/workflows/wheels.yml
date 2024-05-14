@@ -108,11 +108,16 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: win_amd64 - install rtools
+      - name: win_amd64 - install rtools, set PKG_CONFIG_PATH
         run: |
           # mingw-w64
           choco install rtools -y --no-progress --force --version=4.0.0.20220206
           echo "c:\rtools40\ucrt64\bin;" >> $env:GITHUB_PATH
+          $CIBW = "${{ github.workspace }}/.openblas"
+          # It seems somewhere in the env passing, `\` is not
+          # passed through, so convert it to '/'
+          $CIBW = $CIBW.replace("\","/")
+          echo "CIBW_ENVIRONMENT_WINDOWS=PKG_CONFIG_PATH=$CIBW" >> $env:GITHUB_ENV
         if: ${{ runner.os == 'Windows' && env.IS_32_BIT == 'false' }}
 
       - name: Setup macOS

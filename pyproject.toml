@@ -158,4 +158,7 @@ before-build = "pip install ninja && bash {project}/tools/wheels/cibw_before_bui
 repair-wheel-command = "bash ./tools/wheels/repair_windows.sh {wheel} {dest_dir}"
 
 [tool.cibuildwheel.windows.environment]
+# This does not work because pkg-config does not like backslashes,
+# do this instead
+# set CIBW_ENVIRONMENT_WINDOWS=PKG_CONFIG_PATH=PWD.replace('\\', '/')
 PKG_CONFIG_PATH="{project}"
