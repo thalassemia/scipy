@@ -145,7 +145,7 @@ before-build = "bash {project}/tools/wheels/cibw_before_build_linux.sh {project}
 # RUNNER_OS is a GitHub Actions specific env var; define it here so it works on Cirrus CI too
 RUNNER_OS="Linux"
 # /project will be the $PWD equivalent inside the docker used to build the wheel
-PKG_CONFIG_PATH="/project/
+PKG_CONFIG_PATH="/project/"
 
 [tool.cibuildwheel.macos]
 before-build = "pip install ninja; bash {project}/tools/wheels/cibw_before_build_macos.sh {project}"

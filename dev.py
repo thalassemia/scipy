@@ -606,8 +606,8 @@ class Build(Task):
 
         Requires a pre-installed scipy-openblas32 wheel from PyPI.
         """
-        openblas_dir = os.getcwd()
-        pkg_config_fname = os.path.join(openblas_dir, "scipy-openblas.pc")
+        basedir = os.getcwd()
+        pkg_config_fname = os.path.join(basedir, "scipy-openblas.pc")
 
         if os.path.exists(pkg_config_fname):
             return None
@@ -625,9 +625,8 @@ class Build(Task):
         with open(local, "w", encoding="utf8") as fid:
             fid.write(f"import {module_name}\n")
 
-        os.makedirs(openblas_dir, exist_ok=True)
         with open(pkg_config_fname, "w", encoding="utf8") as fid:
-            fid.write(openblas.get_pkg_config().replace("\\", "/"))
+            fid.write(openblas.get_pkg_config())
 
     @classmethod
     def run(cls, add_path=False, **kwargs):
