@@ -385,8 +385,10 @@ jobs:
         library_dirs = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_lib_dir())')
         include_dirs = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_include_dir())')
         runtime_library_dirs = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_lib_dir())')
+        symbol_prefix = scipy_
         EOL
         python -m pip install numpy==1.23.5 cython pybind11 pytest pytest-timeout pytest-xdist pytest-env 'Pillow<10.0.0' mpmath pythran pooch meson hypothesis && \
+        python -c 'import numpy as np; np.show_config()' && \
         python dev.py build --with-scipy-openblas && \
         python dev.py --no-build test"
 
