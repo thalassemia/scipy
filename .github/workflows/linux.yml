@@ -359,7 +359,6 @@ jobs:
     needs: get_commit_message
     if: >
       needs.get_commit_message.outputs.message == 1
-      && (github.repository == 'scipy/scipy' || github.repository == '')
     runs-on: ubuntu-latest
     # I tried running directly in a container:, using the image: and options:
     # entries. Unfortunately at this time options: does not seem to listen to
@@ -378,8 +377,16 @@ jobs:
         python3.10 -m venv test && \
         source test/bin/activate && \
         python -m pip install doit click rich_click pydevtool meson ninja && \
-        python -m pip install numpy==1.23.5 cython pybind11 pytest pytest-timeout pytest-xdist pytest-env 'Pillow<10.0.0' mpmath pythran pooch meson hypothesis && \
         python -m pip install -r requirements/openblas.txt && \
+        # Ensure that scipy-openblas is picked up by Numpy
+        cat > \$HOME/.numpy-site.cfg <<EOL
+        [openblas]
+        libraries = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_library())')
+        library_dirs = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_lib_dir())')
+        include_dirs = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_include_dir())')
+        runtime_library_dirs = \$(python -c 'import scipy_openblas32; print(scipy_openblas32.get_lib_dir())')
+        EOL
+        python -m pip install numpy==1.23.5 cython pybind11 pytest pytest-timeout pytest-xdist pytest-env 'Pillow<10.0.0' mpmath pythran pooch meson hypothesis && \
         python dev.py build --with-scipy-openblas && \
         python dev.py --no-build test"
 
